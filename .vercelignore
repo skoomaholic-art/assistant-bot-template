@@ -1,0 +1,10 @@
+# На Vercel публикуется только мини-апка: index.html и api/.
+# Код бота, тесты и документация остаются только в GitHub.
+.github
+src
+tests
+tests_js
+*.md
+.gitignore
+apps-script
+guide/*.py

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12161b">
+<title>MyBrand | Cover Studio</title>
+<style>
+:root{--bg:#0b0e12;--panel:#151a20;--panel2:#1c222a;--border:#2b333d;--text:#f1ece3;--muted:#97a2ae;--orange:#f2aa4c;--blue:#8cabb8;--error:#ea8782;--ok:#7dc4a0}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45}button,input,select,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+button{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 13px;white-space:nowrap}button:hover{border-color:#6d7681}button.primary{background:var(--orange);color:#14171c;border-color:var(--orange);font-weight:800}button.danger{color:#ffa9a5}button.small{padding:7px 10px;font-size:12px}.logo{width:36px;height:36px;border-radius:50%;display:block;object-fit:cover}
+header{position:sticky;z-index:20;top:0;background:rgba(11,14,18,.97);border-bottom:1px solid var(--border);padding:10px clamp(13px,2vw,30px);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;backdrop-filter:blur(16px)}.brand{display:flex;gap:10px;align-items:center;min-width:210px}.brand b{display:block;font-weight:900;font-size:14px;letter-spacing:.03em}.brand small{display:block;color:var(--muted);font-size:11px}.header-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.status{color:var(--muted);font-size:11px}
+.app{display:grid;grid-template-columns:minmax(284px,330px) minmax(350px,1fr) minmax(238px,276px);gap:0;min-height:calc(100vh - 68px)}aside{background:#12171d;border-right:1px solid var(--border);padding:17px 17px 22px;min-width:0}aside.right{border-right:0;border-left:1px solid var(--border)}h1,h2,h3,p{margin:0}.section-heading{color:var(--text);font-size:13px;letter-spacing:.03em;margin:0 0 11px}.section-sub{font-size:11px;color:var(--muted);margin-top:4px}.controls{display:grid;gap:15px}.control-group{border-bottom:1px solid var(--border);padding-bottom:16px}.control-group:last-child{border:0}label{color:#bdc5ce;display:block;font-size:12px;font-weight:600;margin-bottom:5px}.field{margin:9px 0}.cols2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.form-input,select,textarea{width:100%;background:#0c1116;color:var(--text);border:1px solid var(--border);border-radius:9px;padding:9px 10px;outline:none}.form-input:focus,select:focus,textarea:focus{border-color:var(--orange)}select{min-height:38px}textarea{resize:vertical;min-height:61px}.range-row{display:flex;align-items:center;gap:10px}.range-row input[type=range]{width:100%;accent-color:var(--orange)}.range-row output{width:43px;text-align:right;color:var(--orange);font-size:11px;font-variant-numeric:tabular-nums}.checkline{display:flex;align-items:center;gap:8px;color:var(--text);font-size:12px}.checkline input{accent-color:var(--orange)}details summary{cursor:pointer;font-weight:700;letter-spacing:.015em;padding:4px 0 9px}details .field:first-child{margin-top:2px}
+.stage{min-width:0;display:flex;align-items:center;flex-direction:column;gap:11px;padding:20px 16px 25px;background:radial-gradient(circle at 50% 35%,#1d242c 0%,#0d1116 65%)}.top-stage{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:720px}.top-stage span{color:var(--muted);font-size:12px}.canvas-scroller{display:flex;width:100%;min-height:250px;align-items:center;justify-content:center}.canvas-shell{position:relative;display:inline-block;box-shadow:0 15px 75px #0009;max-width:100%;line-height:0;border:1px solid #ffffff22}.canvas-shell canvas{display:block;width:auto;max-width:min(100%,460px);max-height:66vh;height:auto;object-fit:contain}.stage-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}.square-section{display:flex;align-items:center;justify-content:center;gap:15px;max-width:700px;width:100%;margin-top:2px;padding:12px;border:1px solid var(--border);background:var(--panel);border-radius:12px}.square-section canvas{width:90px;height:90px;border-radius:5px;display:block;flex:none}.square-section .section-sub{max-width:340px}.pill{font-size:11px;border:1px solid #3c4752;border-radius:20px;color:var(--muted);padding:4px 8px}.help{font-size:12px;line-height:1.55;color:var(--muted)}.help b{color:#dce2e8}
+.slide-list{display:grid;gap:7px}.slide{display:flex;align-items:center;gap:9px;min-width:0;text-align:left;width:100%;white-space:normal}.slide.active{background:#35291b;border-color:var(--orange)}.slide-number{height:26px;min-width:26px;display:grid;place-items:center;border-radius:6px;background:#282e36;color:var(--orange);font-weight:800;font-size:11px}.slide-copy{min-width:0;flex:1}.slide-copy b{font-size:12px;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.slide-copy small{font-size:10px;color:var(--muted);display:block}.slide-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.right .control-group{margin-bottom:13px}.right .control-group:last-child{margin-bottom:0}.file-drop{border:1px dashed #59616c;border-radius:10px;padding:13px 10px;text-align:center;color:var(--muted);font-size:12px;cursor:pointer;display:block}.file-drop:hover{border-color:var(--orange);color:var(--text)}.file-drop input{display:none}.kbd{font-size:10px;background:#252c34;border-radius:4px;padding:2px 4px}.mini-preview{width:100%;border-radius:9px;background:#0d1216;padding:12px;border:1px solid var(--border)}.note{background:#211b14;color:#e7cb9e;border-left:3px solid var(--orange);padding:11px 12px;font-size:11px;border-radius:5px}.data-chip{font-size:11px;background:#1c2428;color:var(--muted);padding:6px 7px;border-radius:7px;display:inline-flex;gap:4px;align-items:center}.inline-buttons{display:flex;gap:7px;flex-wrap:wrap}.hidden{display:none!important}#toast{position:fixed;bottom:20px;right:20px;z-index:99;border-radius:12px;background:#26313a;border:1px solid #58636a;color:white;padding:12px 17px;box-shadow:0 8px 35px #0008;max-width:min(90vw,400px);opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}#toast.show{opacity:1;transform:none}
+@media(max-width:1170px){.app{grid-template-columns:310px minmax(320px,1fr)}aside.right{grid-column:1/-1;border-left:0;border-top:1px solid var(--border)}.right .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.slide-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.canvas-shell canvas{max-height:65vh}}
+@media(max-width:720px){header{position:relative}.app{display:flex;flex-direction:column}.stage{order:0;padding:15px 10px 19px}aside.left{order:1;border-top:1px solid var(--border);border-right:0;padding:18px}aside.right{order:2;padding:18px}.right .controls{grid-template-columns:1fr}.canvas-shell canvas{max-height:63vh;max-width:90vw}.brand{min-width:0}.header-actions{justify-content:stretch}.header-actions button{flex:1}.square-section{max-width:420px}}
+@media(prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+<link rel="stylesheet" href="/cover-studio/compact-ui.css">
+</head>
+<body>
+<header>
+  <button id="backBtn" type="button" aria-label="Назад в Ассистента" style="flex:none;min-height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:inherit;font-weight:700;font-size:15px;margin-right:10px">← Назад</button>
+  <div class="brand"><img class="logo" id="headerLogo" alt="Логотип MyBrand: оранжевая киноплёнка с буквой S"><div><b>MYBRAND / COVER STUDIO</b><small>Редактор обложек · автономная HTML-версия</small></div></div>
+  <div class="header-actions">
+    <button id="undoBtn" class="small" title="Отменить последнее редактирование">↶ Отмена</button>
+    <button id="resetAllBtn" class="small danger" title="Очистить конструктор и начать с нуля">🗑 Сбросить всё</button>
+    <button id="importBtn" class="small" title="Загрузить проект из JSON">Открыть проект</button>
+    <button id="saveBtn" class="small">Сохранить JSON</button>
+    <button id="exportPngBtn" class="primary">↓ PNG</button>
+    <button id="exportZipBtn">↓ ZIP всех</button>
+  </div>
+</header>
+<main class="app">
+  <aside class="left">
+    <div class="controls">
+      <div class="control-group">
+        <h2 class="section-heading">01 · ОСНОВА</h2>
+        <div class="field"><label for="preset">Готовая идея / пример</label><select id="preset">
+          <option value="">Свой дизайн</option>
+          <option value="cinema">Кино · Не каждый шедевр должен нравиться</option>
+          <option value="series">Сериалы · Почему бросаем сериалы</option>
+          <option value="detail">Детали · Одна деталь меняет всё</option>
+          <option value="cinema_carousel">Кино · 5 приёмов для сцены</option>
+          <option value="series_carousel">Сериалы · Рейтинг не решает всё</option>
+        </select></div>
+        <div class="cols2">
+          <div class="field"><label for="format">Формат</label><select id="format" data-field="format"><option value="reel">Reels · 9:16</option><option value="portrait">Карусель · 4:5</option><option value="square">Квадрат · 1:1</option><option value="wide">Превью · 16:9</option></select></div>
+          <div class="field"><label for="category">Рубрика</label><select id="category" data-field="category"><option value="cinema">Кино</option><option value="series">Сериалы</option><option value="analysis">Разбор</option><option value="facts">Факты</option><option value="characters">Персонажи</option><option value="lists">Подборки</option><option value="ai">AI-видео</option></select></div>
+        </div>
+        <div class="cols2">
+          <div class="field"><label for="layout">Композиция</label><select id="layout" data-field="layout"><option value="editorial">Редакционная</option><option value="poster">Постер</option><option value="center">По центру</option><option value="split">Боковая полоса</option><option value="number">Номер / ТОП</option></select></div>
+          <div class="field"><label for="theme">Цвет акцента</label><select id="theme" data-field="theme"><option value="orange">Фирменный оранжевый</option><option value="blue">Серо-голубой</option><option value="red">Приглушённый красный</option><option value="ivory">Монохром</option><option value="green">Приглушённый зелёный</option></select></div>
+        </div>
+      </div>
+      <div class="control-group">
+        <h2 class="section-heading">02 · ТЕКСТ</h2>
+        <div class="field"><label for="title">Главный заголовок</label><textarea id="title" data-field="title" placeholder="Крупный, короткий заголовок" maxlength="170"></textarea></div>
+        <div class="cols2"><div class="field"><label for="kicker">Надпись сверху</label><input class="form-input" id="kicker" data-field="kicker" maxlength="45"></div><div class="field"><label for="episode">Номер / выпуск</label><input class="form-input" id="episode" data-field="episode" maxlength="15"></div></div>
+        <div class="field"><label for="subtitle">Подзаголовок</label><textarea id="subtitle" data-field="subtitle" maxlength="170" placeholder="Короткое пояснение (можно оставить пустым)"></textarea></div>
+        <div class="field"><label for="footer">Подпись снизу</label><input class="form-input" id="footer" data-field="footer" maxlength="80"></div>
+        <div class="cols2"><div class="field"><label for="typeface">Гарнитура</label><select id="typeface" data-field="typeface"><option value="sans">Строгий гротеск</option><option value="condensed">Узкий акцидентный</option><option value="serif">Редакционная антиква</option></select></div><div class="field"><label for="titleAlign">Выравнивание</label><select id="titleAlign" data-field="titleAlign"><option value="left">Слева</option><option value="center">Центр</option><option value="right">Справа</option></select></div></div>
+        <div class="field"><label for="titleSize">Крупность заголовка</label><div class="range-row"><input id="titleSize" type="range" data-field="titleSize" min="60" max="160" step="5"><output data-for="titleSize"></output></div></div>
+        <div class="cols2"><div class="field"><label for="titleY">Положение по вертикали</label><div class="range-row"><input id="titleY" type="range" data-field="titleY" min="15" max="82" step="1"><output data-for="titleY"></output></div></div><div class="field"><label for="titleWidth">Ширина заголовка</label><div class="range-row"><input id="titleWidth" type="range" data-field="titleWidth" min="50" max="92" step="2"><output data-for="titleWidth"></output></div></div></div>
+      </div>
+      <div class="control-group">
+        <details open><summary>03 · ФОН И ГРАФИКА</summary>
+          <div class="field"><label for="backgroundUpload" class="file-drop">＋ Загрузить собственное фоновое изображение<input type="file" accept="image/*" id="backgroundUpload"></label></div>
+          <div class="inline-buttons"><button id="clearBg" class="small">Удалить фон</button><span class="data-chip" id="bgStatus">Изображение не загружено</span></div>
+          <div class="cols2"><div class="field"><label for="bgMode">Тип фона</label><select id="bgMode" data-field="bgMode"><option value="solid">Сплошной</option><option value="bars">Тонкие линии</option><option value="circle">Геометрия</option><option value="film">Киноплёнка</option></select></div><div class="field"><label for="bgFit">Изображение</label><select id="bgFit" data-field="bgFit"><option value="cover">Заполнить кадр</option><option value="contain">Уместить целиком</option></select></div></div>
+          <div class="field"><label for="dim">Затемнение загруженного фото</label><div class="range-row"><input type="range" min="0" max="90" step="5" id="dim" data-field="dim"><output data-for="dim"></output></div></div>
+          <div class="field"><label for="bgX">Фото: фокус по горизонтали</label><div class="range-row"><input type="range" min="0" max="100" id="bgX" data-field="bgX"><output data-for="bgX"></output></div></div>
+          <div class="field"><label for="bgY">Фото: фокус по вертикали</label><div class="range-row"><input type="range" min="0" max="100" id="bgY" data-field="bgY"><output data-for="bgY"></output></div></div>
+          <div class="field"><label for="bgColor">Цвет фона</label><input type="color" id="bgColor" data-field="bgColor" class="form-input" style="height:40px;padding:3px"></div>
+        </details>
+      </div>
+      <div class="control-group">
+        <details><summary>04 · ЛОГОТИП И РАЗМЕТКА</summary>
+          <div class="field"><label class="checkline"><input id="showLogo" type="checkbox" data-field="showLogo"> Использовать мой логотип</label></div>
+          <div class="field"><label for="logoPosition">Положение логотипа</label><select id="logoPosition" data-field="logoPosition"><option value="bottom-right">Снизу справа</option><option value="bottom-left">Снизу слева</option><option value="top-right">Сверху справа</option><option value="top-left">Сверху слева</option><option value="none">Не показывать</option></select></div>
+          <div class="field"><label for="logoSize">Размер логотипа</label><div class="range-row"><input id="logoSize" type="range" min="5" max="18" step="1" data-field="logoSize"><output data-for="logoSize"></output></div></div>
+          <label for="logoUpload" class="file-drop">Заменить логотип (PNG/JPG)<input id="logoUpload" accept="image/*" type="file"></label>
+          <div class="field"><label class="checkline"><input type="checkbox" id="guides"> Показывать обрезку профиля 1:1</label></div>
+        </details>
+      </div>
+    </div>
+  </aside>
+  <section class="stage">
+    <div class="top-stage"><div><h1 style="font-size:17px">Предпросмотр</h1><span id="dimensions">1080 × 1920 · Reels</span></div><span class="pill" id="slideIndex">Слайд 1 / 1</span></div>
+    <div class="canvas-scroller"><div class="canvas-shell"><canvas id="art" width="1080" height="1920" role="img" aria-label="Предпросмотр обложки"></canvas></div></div>
+    <div class="stage-actions"><button id="shuffleBtn" class="small">↔ Другой макет</button><button id="duplicateBtn" class="small">＋ Дублировать</button><button id="fitTitleBtn" class="small">◈ Подогнать текст</button></div>
+    <div class="square-section"><canvas id="gridArt" width="250" height="250"></canvas><div><b>Так увидят в квадратной сетке</b><p class="section-sub">Центральная обрезка 1:1. Оригинальная обложка остаётся в выбранном формате.</p></div></div>
+    <p class="help" style="max-width:660px;text-align:center">Все изменения появляются сразу. Файлы экспортируются в реальном разрешении. Приложение работает <b>без интернета</b> и ничего не публикует в Instagram.</p>
+  </section>
+  <aside class="right">
+    <div class="controls">
+      <div class="control-group">
+        <h2 class="section-heading">05 · СЛАЙДЫ И СБОРКА</h2><p class="section-sub" style="margin-bottom:12px">Один слайд = отдельная обложка или кадр карусели.</p>
+        <div class="slide-list" id="slides"></div>
+        <div class="slide-tools"><button class="small" id="addBtn">＋ Новый</button><button class="small" id="cloneBtn">⧉ Копия</button><button class="small danger" id="deleteBtn">Удалить</button></div>
+        <div class="slide-tools"><button class="small" id="upBtn">↑ Ранее</button><button class="small" id="downBtn">↓ Позже</button></div>
+      </div>
+      <div class="control-group">
+        <h2 class="section-heading">06 · АВТОСБОРКА</h2>
+        <p class="help">Добавь пункты поста: по одному на строку. Программа создаст обложку, карточки пунктов и финальный слайд. Все тексты потом можно изменить.</p>
+        <div class="field"><label for="bullets">Пункты карусели</label><textarea id="bullets" rows="6" placeholder="Ракурс меняет смысл сцены\nСвет задаёт настроение\nПауза важнее диалога\nМонтаж управляет вниманием"></textarea></div>
+        <button id="buildCarousel" class="primary" style="width:100%">Создать карусель</button>
+        <p class="section-sub">Создаёт новый набор слайдов, не публикует. Сначала скачай JSON, если хочешь сохранить предыдущий набор.</p>
+      </div>
+      <div class="control-group">
+        <h2 class="section-heading">07 · ЭКСПОРТ</h2>
+        <p class="help">PNG — текущий слайд. ZIP — все слайды раздельными PNG. JSON — редактируемый проект, включая собственный загруженный фон.</p>
+        <div class="inline-buttons" style="margin-top:12px"><button class="primary" id="exportPngSecondary">PNG</button><button id="exportZipSecondary">ZIP</button></div>
+        <div style="margin-top:14px" class="note">Используй только собственные изображения или материалы с разрешением. Этот редактор не проверяет авторские права и не заменяет модерацию.</div>
+      </div>
+      <div class="control-group"><p class="help"><b>Локальное сохранение:</b> изменения сохраняются в этом браузере. Для переноса на другой телефон или компьютер используй JSON.</p></div>
+    </div>
+  </aside>
+</main>
+<input id="projectInput" type="file" accept=".json,application/json" class="hidden">
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+const ORIGINAL_AVATAR = 'data:image/png;base64,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';
+const $ = id => document.getElementById(id);
+const art = $('art'); const gridArt = $('gridArt');
+const SIZE = {reel:[1080,1920],portrait:[1080,1350],square:[1080,1080],wide:[1920,1080]};
+const CATS={cinema:'КИНО',series:'СЕРИАЛЫ',analysis:'РАЗБОР',facts:'ФАКТЫ',characters:'ПЕРСОНАЖИ',lists:'ПОДБОРКИ',ai:'AI / ВИДЕО'};
+const COLORS={orange:'#F2AA4C',blue:'#90AFB9',red:'#C76C66',ivory:'#F1ECE3',green:'#92B3A0'};
+const FONTS={sans:'Arial, Helvetica, sans-serif',condensed:'"Arial Narrow", "Liberation Sans Narrow", Arial, sans-serif',serif:'Georgia, "Times New Roman", serif'};
+const STORAGE='mybrand-cover-studio-v2';
+let logoData=ORIGINAL_AVATAR;let logoImage=null;let slides=[];let active=0;let history=[];let saveTimer=null;let toastTimer=null;
+function baseSlide(){return {stylePreset:'noir',format:'reel',category:'cinema',layout:'editorial',theme:'orange',title:'НЕ КАЖДЫЙ\nШЕДЕВР ДОЛЖЕН\nНРАВИТЬСЯ',kicker:'КИНО / МНЕНИЕ',subtitle:'Кино, которое хочется обсудить',footer:'MYBRAND',episode:'01',typeface:'sans',titleAlign:'left',titleSize:100,titleY:41,titleWidth:81,bgMode:'solid',bgFit:'cover',dim:70,bgX:50,bgY:50,bgColor:'#12161B',bgImage:null,showLogo:true,logoPosition:'bottom-right',logoSize:10,autofit:true};}
+const PRESETS={
+ cinema:{format:'reel',category:'cinema',title:'НЕ КАЖДЫЙ\nШЕДЕВР ДОЛЖЕН\nНРАВИТЬСЯ',kicker:'КИНО / МНЕНИЕ',subtitle:'И это нормально',footer:'MYBRAND',episode:'01',theme:'orange',layout:'editorial',titleY:42},
+ series:{format:'reel',category:'series',title:'ПОЧЕМУ МЫ\nБРОСАЕМ\nСЕРИАЛЫ',kicker:'СЕРИАЛЫ / РАЗБОР',subtitle:'Дело не только в сценарии',footer:'MYBRAND',episode:'02',theme:'blue',layout:'poster',titleY:53},
+ detail:{format:'reel',category:'facts',title:'ОДНА ДЕТАЛЬ\nМЕНЯЕТ ВСЁ',kicker:'КИНО / ДЕТАЛИ',subtitle:'Как режиссёры управляют вниманием',footer:'MYBRAND',episode:'03',theme:'orange',layout:'center',titleY:44,titleAlign:'center'},
+ cinema_carousel:{format:'portrait',category:'cinema',title:'5 ПРИЁМОВ,\nКОТОРЫЕ\nМЕНЯЮТ СЦЕНУ',kicker:'КИНО / КАРУСЕЛЬ',subtitle:'Взгляни на кадр иначе',footer:'ЛИСТАЙ →',episode:'04',theme:'orange',layout:'number',titleY:43},
+ series_carousel:{format:'portrait',category:'series',title:'РЕЙТИНГ НЕ\nРЕШАЕТ ВСЁ',kicker:'СЕРИАЛЫ / КАРУСЕЛЬ',subtitle:'Почему чужая оценка не равна твоей',footer:'ЛИСТАЙ →',episode:'05',theme:'blue',layout:'split',titleY:46}
+};
+function clone(x){return JSON.parse(JSON.stringify(x));}
+function slide(){return slides[active];}
+function safeColor(s){return typeof s==='string'&&/^#[0-9a-f]{6}$/i.test(s)?s:'#12161B'}
+function clamp(v,a,b){return Math.min(b,Math.max(a,Number(v)||a))}
+function safeDataURI(s){return typeof s==='string'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(s)&&s.length<6500000?s:null}
+function normalize(x){let d=baseSlide();if(!x||typeof x!=='object')return d;for(let k of Object.keys(d)){if(k==='bgImage'){d.bgImage=safeDataURI(x.bgImage);continue;}if(typeof d[k]==='string'&&typeof x[k]==='string'&&x[k].length<16000)d[k]=x[k];if(typeof d[k]==='number'&&Number.isFinite(x[k]))d[k]=x[k];if(typeof d[k]==='boolean'&&typeof x[k]==='boolean')d[k]=x[k];}
+ if(!SIZE[d.format])d.format='reel';if(!CATS[d.category])d.category='cinema';if(!COLORS[d.theme])d.theme='orange';if(!['editorial','poster','center','split','number'].includes(d.layout))d.layout='editorial';if(!FONTS[d.typeface])d.typeface='sans';if(!['left','center','right'].includes(d.titleAlign))d.titleAlign='left';if(!['solid','bars','circle','film','vignette','beam','frame','grain'].includes(d.bgMode))d.bgMode='solid';if(!['cover','contain'].includes(d.bgFit))d.bgFit='cover';if(!['bottom-right','bottom-left','top-right','top-left','none'].includes(d.logoPosition))d.logoPosition='bottom-right';d.titleSize=clamp(d.titleSize,60,160);d.titleY=clamp(d.titleY,15,82);d.titleWidth=clamp(d.titleWidth,50,92);d.logoSize=clamp(d.logoSize,5,18);d.dim=clamp(d.dim,0,90);d.bgX=clamp(d.bgX,0,100);d.bgY=clamp(d.bgY,0,100);d.bgColor=safeColor(d.bgColor);return d;}
+function toast(t){$('toast').textContent=t;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2900)}
+function snapshot(){history.push(JSON.stringify({slides,active,logoData}));if(history.length>18)history.shift()}
+function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(STORAGE,JSON.stringify({version:2,slides,active,logoData}));$('saveBtn').title='Автосохранено'}catch(e){$('saveBtn').title='Доступно только сохранение через JSON';}},650)}
+function loadStored(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data&&Array.isArray(data.slides)&&data.slides.length&&data.slides.length<=40){slides=data.slides.map(normalize);active=Math.min(Math.max(0,data.active||0),slides.length-1);logoData=safeDataURI(data.logoData)||ORIGINAL_AVATAR;window.__skoomaDraftMeta=data.postMeta||null;document.dispatchEvent(new Event('skooma-draft-changed'));return;}}catch(e){}slides=[baseSlide()];}
+const cache=new Map();function imgFrom(src,done){if(!src){done(null);return;}if(cache.has(src)){const cached=cache.get(src);if(cached.complete&&cached.naturalWidth)done(cached);else cached.addEventListener('load',()=>done(cached),{once:true});return;}const im=new Image();cache.set(src,im);im.onload=()=>done(im);im.onerror=()=>done(null);im.src=src;}
+function createCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function fitDraw(ctx,img,w,h,mode,fx=50,fy=50){const ratio=(mode==='contain')?Math.min(w/img.width,h/img.height):Math.max(w/img.width,h/img.height);const dw=img.width*ratio,dh=img.height*ratio;ctx.drawImage(img,(w-dw)*fx/100,(h-dh)*fy/100,dw,dh);}
+function roundedRect(ctx,x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2));ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
+function setFont(ctx,size,face,weight=800){ctx.font=`${weight} ${Math.round(size)}px ${FONTS[face]||FONTS.sans}`;ctx.textBaseline='top';}
+function wrapLines(ctx,text,maxWidth,maxLines=8){const result=[];for(const para of String(text||'').split('\n')){if(!para.trim()){result.push('');continue;}let line='';for(const word of para.split(/\s+/)){let trial=line?line+' '+word:word;if(ctx.measureText(trial).width<=maxWidth){line=trial;continue;}if(line){result.push(line);line='';}if(ctx.measureText(word).width<=maxWidth){line=word;continue;}let part='';for(const ch of word){if(ctx.measureText(part+ch).width>maxWidth&&part){result.push(part);part='';}part+=ch;}line=part;}if(line)result.push(line);}return result.slice(0,maxLines);}
+function lineText(ctx,text,x,y,maxWidth,options={}){const fs=options.size||28;setFont(ctx,fs,options.face||'sans',options.weight||400);const lines=wrapLines(ctx,text,maxWidth,options.maxLines||3);ctx.fillStyle=options.color||'#fff';ctx.textAlign=options.align||'left';for(let i=0;i<lines.length;i++){ctx.fillText(lines[i],x,y+i*fs*(options.lineHeight||1.25));}ctx.textAlign='left';return y+lines.length*fs*(options.lineHeight||1.25)}
+function titleBlock(ctx,s,w,h,accent){const wide=s.format==='wide';const base=w/1080;const align=s.titleAlign;const mx=w*(1-s.titleWidth/100)/2;const width=w*s.titleWidth/100;const textX=align==='center'?w/2:align==='right'?w-mx:mx;
+ let fs=(wide?94:s.format==='portrait'?94:s.format==='square'?82:107)*base*s.titleSize/100;let lines;let face=s.typeface;const maxTitleH=h*(wide?.41:.43);
+ for(;fs>=31;fs-=3){setFont(ctx,fs,face);lines=wrapLines(ctx,String(s.title||'').toLocaleUpperCase('ru-RU'),width,10);if(lines.length*fs*1.045<=maxTitleH && lines.every(l=>ctx.measureText(l).width<=width+1))break;}
+ if(!lines)lines=[''];const lineH=fs*1.045;const totalH=lines.length*lineH;let y=h*s.titleY/100-totalH/2;y=Math.max(h*.16,Math.min(h-totalH-h*.12,y));
+ if(s.layout==='center')ctx.textAlign='center';else ctx.textAlign=align;
+ if(s.layout==='center'&&align==='left')ctx.textAlign='center';
+ const ox=(s.layout==='center'&&align==='left')?w/2:textX;
+ if(s.layout==='split'&& !s.bgImage){ctx.fillStyle=accent;ctx.fillRect(0,0,w*.068,h);}
+ if(s.layout==='number'){ctx.globalAlpha=.12;setFont(ctx,265*base,'sans',800);ctx.fillStyle=accent;ctx.textAlign='right';ctx.fillText(String(s.episode||'01'),w*.94,h*.16);ctx.globalAlpha=1;ctx.textAlign=align;}
+ if(s.layout==='poster'){ctx.fillStyle=accent;ctx.fillRect(mx,y-35*base,80*base,6*base);}
+ ctx.fillStyle='#F1ECE3';setFont(ctx,fs,face,800);
+ for(let i=0;i<lines.length;i++){ctx.fillText(lines[i],ox,y+i*lineH);}
+ if(s.layout==='center'&&align==='left')ctx.textAlign='left';else ctx.textAlign='left';
+ const after=y+totalH;
+ if(String(s.subtitle||'').trim()){let sz=Math.max(21*base,31*base);const longSub=String(s.subtitle).length>90;const subMax=longSub?w*.82:Math.min(Math.max(width,w*.62),w*.8);if(longSub)sz=(String(s.subtitle).split('\n').length>8?34:String(s.subtitle).length>180?40:44)*base;if(s.format==='reel')sz=Math.max(sz,(String(s.subtitle).length>140?46:56)*base);let subX=ox, subAlign=align;if(s.layout==='center'&&align==='left'){subX=w/2;subAlign='center';}let subY=after+35*base;if(subY<h*.83)lineText(ctx,s.subtitle,subX,subY,s.format==='reel'?Math.max(subMax,w*.84):subMax,{size:sz,color:s.format==='reel'?'#DCE3EA':'#BDC7D0',align:subAlign,maxLines:longSub?Math.max(9,String(s.subtitle).split('\n').length+2):(s.format==='reel'?5:4),lineHeight:longSub?1.32:1.26});}
+}
+function drawBackground(ctx,s,w,h,accent,bgImg){ctx.fillStyle=safeColor(s.bgColor);ctx.fillRect(0,0,w,h);
+ if(bgImg){fitDraw(ctx,bgImg,w,h,s.bgFit,s.bgX,s.bgY);ctx.fillStyle=`rgba(5,8,11,${(s.dim/100).toFixed(2)})`;ctx.fillRect(0,0,w,h);}else{
+ const sc=w/1080;
+ ctx.save();ctx.globalAlpha=.24;ctx.strokeStyle=accent;ctx.lineWidth=2.2*sc;
+ if(s.bgMode==='bars'){for(let i=0;i<7;i++){let x=w*(.66+i*.044);ctx.beginPath();ctx.moveTo(x,h*.12);ctx.lineTo(x,h*.85);ctx.stroke();}}
+ if(s.bgMode==='circle'){for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(w*.69,h*.43,(170+i*95)*sc,0,Math.PI*2);ctx.stroke();}}
+ if(s.bgMode==='film'){const ww=w*.20;ctx.strokeRect(w*.77,h*.1,ww,h*.72);for(let i=0;i<10;i++){let y=h*(.13+i*.066);ctx.fillStyle=accent;ctx.fillRect(w*.79,y,15*sc,16*sc);ctx.fillRect(w*.92,y,15*sc,16*sc);}}
+ if(s.bgMode==='vignette'){const r=ctx.createRadialGradient(w*.48,h*.43,w*.05,w*.48,h*.43,h*.82);r.addColorStop(0,'rgba(0,0,0,0)');r.addColorStop(1,'rgba(0,0,0,.38)');ctx.globalAlpha=1;ctx.fillStyle=r;ctx.fillRect(0,0,w,h);}
+ if(s.bgMode==='beam'){const g=ctx.createLinearGradient(w*.52,h*.20,w*.95,h*.72);g.addColorStop(0,'rgba(242,170,76,0)');g.addColorStop(.65,'rgba(242,170,76,.08)');g.addColorStop(1,'rgba(242,170,76,.012)');ctx.globalAlpha=1;ctx.fillStyle=g;ctx.fillRect(w*.52,0,w*.48,h);}
+ if(s.bgMode==='frame'){ctx.globalAlpha=.26;ctx.lineWidth=2.4*sc;ctx.strokeStyle=accent;ctx.beginPath();ctx.moveTo(w*.74,h*.24);ctx.lineTo(w*.91,h*.24);ctx.lineTo(w*.91,h*.35);ctx.moveTo(w*.74,h*.75);ctx.lineTo(w*.91,h*.75);ctx.lineTo(w*.91,h*.65);ctx.stroke();}
+ if(s.bgMode==='grain'){ctx.globalAlpha=.13;ctx.fillStyle='#F1ECE3';let seed=41007;for(let i=0;i<1400;i++){seed=(seed*1664525+1013904223)>>>0;const x=(seed%10007)/10007*w;seed=(seed*1664525+1013904223)>>>0;const y=(seed%10009)/10009*h;ctx.fillRect(x,y,1.1*sc,1.1*sc);}}
+ ctx.restore();}
+ if(s.layout==='split'&&bgImg){ctx.fillStyle=accent;ctx.fillRect(0,0,w*.025,h);}
+}
+function drawBrand(ctx,s,w,h,accent,logo){const sc=w/1080, m=w*.092;
+ // minimal header: narrow accent bar + category label
+ ctx.fillStyle=accent;ctx.fillRect(m,h*.074,60*sc,6*sc);
+ ctx.fillStyle='#F1ECE3';ctx.textAlign='left';setFont(ctx,26*sc,'sans',700);const kicker=(s.kicker||CATS[s.category]).slice(0,70).toLocaleUpperCase('ru-RU');ctx.fillText(kicker,m,h*.092);
+ if(s.episode){ctx.textAlign='right';setFont(ctx,23*sc,'sans',700);ctx.fillStyle=accent;ctx.fillText(s.episode,w-m,h*.09);ctx.textAlign='left';}
+ ctx.fillStyle='#F1ECE3';setFont(ctx,23*sc,'sans',600);ctx.globalAlpha=.78;const bottomY=h*.91;ctx.fillText((s.footer||'MYBRAND').slice(0,90),m,bottomY);ctx.globalAlpha=1;
+ if(s.showLogo&&s.logoPosition!=='none'&&logo){const size=Math.min(w,h)*s.logoSize/100, pad=Math.max(m*.38,20*sc);let x=s.logoPosition.endsWith('left')?pad:w-pad-size;let y=s.logoPosition.startsWith('top')?h*.045:h*.86;
+ ctx.save();ctx.beginPath();ctx.arc(x+size/2,y+size/2,size/2,0,Math.PI*2);ctx.clip();ctx.drawImage(logo,x,y,size,size);ctx.restore();}
+}
+function drawCanvas(target,s,guide=false,logoImg=null,bgImg=null){const [w,h]=SIZE[s.format];if(target.width!==w)target.width=w;if(target.height!==h)target.height=h;const ctx=target.getContext('2d');const accent=COLORS[s.theme];ctx.clearRect(0,0,w,h);drawBackground(ctx,s,w,h,accent,bgImg);titleBlock(ctx,s,w,h,accent);drawBrand(ctx,s,w,h,accent,logoImg);
+ if(guide&&w!==h){ctx.save();ctx.strokeStyle='#f2aa4c';ctx.lineWidth=4*w/1080;ctx.setLineDash([15*w/1080,12*w/1080]);let dim=Math.min(w,h),xx=(w-dim)/2,yy=(h-dim)/2;ctx.strokeRect(xx,yy,dim,dim);ctx.setLineDash([]);ctx.fillStyle='#F2AA4C';ctx.font=`${16*w/1080}px Arial`;ctx.fillText('ЦЕНТРАЛЬНЫЙ КРОП 1:1',xx+8,yy+12);ctx.restore();}
+ return target;}
+function updateGrid(){const gw=250,gh=250;const gctx=gridArt.getContext('2d');gctx.clearRect(0,0,gw,gh);let dim=Math.min(art.width,art.height),xx=(art.width-dim)/2,yy=(art.height-dim)/2;gctx.drawImage(art,xx,yy,dim,dim,0,0,gw,gh);}
+let requestId=0;
+function preview(){let id=++requestId;const s=slide();if(!s)return;const [w,h]=SIZE[s.format];const imageData=s.bgImage;imgFrom(logoData,lg=>{imgFrom(imageData,bg=>{if(id!==requestId)return;drawCanvas(art,s,$('guides').checked,lg,bg);updateGrid();$('dimensions').textContent=`${w} × ${h} · ${s.format==='reel'?'Reels':s.format==='portrait'?'Карусель':s.format==='square'?'Квадрат':'Горизонтальное'}`;$('slideIndex').textContent=`Слайд ${active+1} / ${slides.length}`;});});}
+function renderSlides(){const root=$('slides');root.innerHTML='';slides.forEach((s,i)=>{const b=document.createElement('button');b.className='slide'+(i===active?' active':'');b.type='button';const number=document.createElement('span');number.className='slide-number';number.textContent=String(i+1).padStart(2,'0');const name=document.createElement('span');name.className='slide-copy';const strong=document.createElement('b');strong.textContent=(s.title||'Новая обложка').replace(/\n/g,' ').slice(0,48);const sub=document.createElement('small');sub.textContent=CATS[s.category]+' · '+s.format;name.append(strong,sub);b.append(number,name);b.onclick=()=>{active=i;syncUI();persist();};root.appendChild(b)});}
+function syncUI(){const s=slide();document.querySelectorAll('[data-field]').forEach(el=>{const key=el.dataset.field;if(el.type==='checkbox')el.checked=!!s[key];else el.value=s[key]??'';});document.querySelectorAll('output[data-for]').forEach(el=>{let k=el.dataset.for;el.textContent=s[k]+(k==='titleY'||k==='titleWidth'||k==='dim'||k==='bgX'||k==='bgY'||k==='logoSize'?'%':'');});$('bgStatus').textContent=s.bgImage?'Фон загружен':'Без фото';renderSlides();preview();}
+function mutation(fn){snapshot();fn();syncUI();persist();}
+function fieldChanged(el){const s=slide(),key=el.dataset.field;if(!key)return;let value=el.type==='checkbox'?el.checked:el.type==='range'?Number(el.value):el.value;
+ if(['title','kicker','subtitle','footer','episode'].includes(key)&&String(value).length>400)value=String(value).slice(0,400);
+ if(key==='category'){s.category=value;s.theme=value==='series'?'blue':'orange';s.kicker=CATS[value]+' / '+(s.format==='reel'?'REELS':'ПОСТ');}
+ else s[key]=value;
+ if(key==='format'){if(value==='portrait'||value==='square')s.footer='ЛИСТАЙ →';}
+ document.querySelectorAll('output[data-for]').forEach(out=>{if(out.dataset.for===key)out.textContent=value+(['titleY','titleWidth','dim','bgX','bgY','logoSize'].includes(key)?'%':'')});
+ if(key==='category'||key==='format')syncUI();else {renderSlides();preview();persist();}}
+document.querySelectorAll('[data-field]').forEach(el=>{el.addEventListener('focus',snapshot);el.addEventListener(el.tagName==='TEXTAREA'||el.tagName==='INPUT'&&el.type==='text'?'input':'change',()=>fieldChanged(el));if(el.type==='range'||el.type==='color')el.addEventListener('input',()=>fieldChanged(el));});
+$('preset').onchange=()=>{const p=PRESETS[$('preset').value];if(!p)return;mutation(()=>{const prev=slide();slides[active]=normalize({...baseSlide(),...p,bgImage:prev.bgImage,showLogo:prev.showLogo,logoPosition:prev.logoPosition,logoSize:prev.logoSize});});toast('Пример применён — все поля редактируются');};
+$('shuffleBtn').onclick=()=>mutation(()=>{const s=slide();const seq=['editorial','poster','center','split','number'];s.layout=seq[(seq.indexOf(s.layout)+1)%seq.length];s.titleAlign=s.layout==='center'?'center':'left';});
+$('fitTitleBtn').onclick=()=>mutation(()=>{slide().titleSize=100;slide().titleWidth=82;slide().titleY=slide().format==='reel'?42:47;});
+$('addBtn').onclick=()=>mutation(()=>{slides.push(normalize({...baseSlide(),...slide(),title:'НОВАЯ\nОБЛОЖКА',episode:String(slides.length+1).padStart(2,'0')}));active=slides.length-1;});
+function dup(){mutation(()=>{const copy=clone(slide());slides.splice(active+1,0,copy);active++;});}
+$('duplicateBtn').onclick=dup;$('cloneBtn').onclick=dup;
+$('deleteBtn').onclick=()=>{if(slides.length===1){toast('Нужен хотя бы один слайд');return;}mutation(()=>{slides.splice(active,1);active=Math.min(active,slides.length-1);});};
+function move(d){const next=active+d;if(next<0||next>=slides.length)return;mutation(()=>{[slides[active],slides[next]]=[slides[next],slides[active]];active=next;});}
+$('upBtn').onclick=()=>move(-1);$('downBtn').onclick=()=>move(1);
+$('undoBtn').onclick=()=>{if(!history.length){toast('Пока нечего отменять');return;}const p=JSON.parse(history.pop());slides=p.slides.map(normalize);active=p.active;logoData=p.logoData;syncUI();persist();toast('Изменение отменено');};
+function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+function filename(i,s){let suf=s.format==='reel'?'reel':s.format==='portrait'?'carousel':s.format;return `MyBrand_${String(i+1).padStart(2,'0')}_${suf}.png`}
+function blobFromCanvas(c){return new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('PNG export failed')),'image/png'));}
+function renderToNew(s){return new Promise(resolve=>imgFrom(logoData,lg=>imgFrom(s.bgImage,bg=>{const c=createCanvas(...SIZE[s.format]);drawCanvas(c,s,false,lg,bg);resolve(c);})));}
+async function exportPng(){try{const i=active,s=clone(slide()),canvas=await renderToNew(s);download(await blobFromCanvas(canvas),filename(i,s));toast('PNG создан в полном разрешении');}catch(e){toast('Ошибка экспорта PNG: '+e.message);}}
+$('exportPngBtn').onclick=exportPng;$('exportPngSecondary').onclick=exportPng;
+function u16(n){return [n&255,(n>>>8)&255]};function u32(n){return [n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]};
+const crcTable=(()=>{let t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t})();
+function crc32(bytes){let c=-1;for(const b of bytes)c=crcTable[(c^b)&255]^(c>>>8);return(c^-1)>>>0;}
+function makeZip(items){const enc=new TextEncoder(),parts=[],centrals=[];let offset=0,szCentral=0;for(const item of items){const name=enc.encode(item.name),data=item.data;const crc=crc32(data);const local=new Uint8Array([0x50,0x4b,3,4,20,0,0,0,0,0,0,0,0,0,...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),0,0]);parts.push(local,name,data);const central=new Uint8Array([0x50,0x4b,1,2,20,0,20,0,0,0,0,0,0,0,0,0,...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(offset)]);centrals.push(central,name);szCentral+=central.length+name.length;offset+=local.length+name.length+data.length;}
+ const end=new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(items.length),...u16(items.length),...u32(szCentral),...u32(offset),0,0]);return new Blob([...parts,...centrals,end],{type:'application/zip'});}
+async function exportZip(){const button=$('exportZipBtn');button.disabled=true;button.textContent='Собираю ZIP…';try{const files=[];for(let i=0;i<slides.length;i++){const s=clone(slides[i]),c=await renderToNew(s),blob=await blobFromCanvas(c);files.push({name:filename(i,s),data:new Uint8Array(await blob.arrayBuffer())});}download(makeZip(files),'MyBrand_Covers.zip');toast(`Готово: ${files.length} отдельных PNG в ZIP`);}catch(e){toast('Ошибка архива: '+e.message)}finally{button.disabled=false;button.textContent='↓ ZIP всех'}}
+$('exportZipBtn').onclick=exportZip;$('exportZipSecondary').onclick=exportZip;
+$('saveBtn').onclick=()=>{const data={app:'MyBrand Cover Studio',version:2,brand:'mybrand',slides,active,logoData,postMeta:window.__skoomaDraftMeta||null};download(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),'MyBrand_Cover_Project.json');toast('Редактируемый JSON сохранён');};
+$('importBtn').onclick=()=>$('projectInput').click();$('projectInput').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>10*1024*1024)throw Error('Слишком большой JSON');const data=JSON.parse(await file.text());if(data.version!==2||!Array.isArray(data.slides)||!data.slides.length||data.slides.length>40)throw Error('Неверная структура проекта');snapshot();slides=data.slides.map(normalize);active=clamp(data.active||0,0,slides.length-1);logoData=safeDataURI(data.logoData)||ORIGINAL_AVATAR;imgFrom(logoData,img=>{$('headerLogo').src=logoData});syncUI();persist();toast('Проект открыт');}catch(e){toast('Не удалось загрузить: '+e.message);}e.target.value='';};
+async function fileToData(file,maxDim=1900){if(!file||!file.type.startsWith('image/'))throw Error('Выбери PNG или JPEG');if(file.size>15*1024*1024)throw Error('Изображение больше 15 МБ');return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file);const img=new Image();img.onload=()=>{let factor=Math.min(1,maxDim/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*factor)),h=Math.max(1,Math.round(img.height*factor)),c=createCanvas(w,h);c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);resolve(c.toDataURL('image/jpeg',.85));};img.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Не удалось открыть изображение'));};img.src=url;});}
+$('backgroundUpload').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const data=await fileToData(f,1750);mutation(()=>{slide().bgImage=data;slide().dim=68;});toast('Фото загружено, затемнение можно изменить');}catch(err){toast(err.message)}e.target.value='';};
+$('logoUpload').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const data=await fileToData(f,600);snapshot();logoData=data;$('headerLogo').src=data;cache.clear();preview();persist();toast('Логотип заменён во всём проекте');}catch(err){toast(err.message)}e.target.value='';};
+$('clearBg').onclick=()=>mutation(()=>{slide().bgImage=null;});
+$('guides').onchange=preview;
+$('buildCarousel').onclick=()=>{const bullets=$('bullets').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).slice(0,10);if(!bullets.length){toast('Добавь хотя бы один пункт');return;}const s=clone(slide());snapshot();const pages=[normalize({...s,format:'portrait',title:s.title,subtitle:'ЛИСТАЙ →',footer:'MYBRAND',episode:'01'})];for(let i=0;i<bullets.length;i++){pages.push(normalize({...s,format:'portrait',title:bullets[i].toLocaleUpperCase('ru-RU'),kicker:`${CATS[s.category]} / ${i+1} ИЗ ${bullets.length}`,subtitle:'',footer:'MYBRAND',episode:String(i+2).padStart(2,'0'),layout:i%2?'poster':'editorial',titleSize:105,titleY:47}));}pages.push(normalize({...s,format:'portrait',title:'А ТЫ КАК\nДУМАЕШЬ?',kicker:'ВОПРОС / ОБСУЖДЕНИЕ',subtitle:'Напиши своё мнение в комментариях',footer:'MYBRAND',episode:String(pages.length+1).padStart(2,'0'),layout:'center',titleAlign:'center'}));slides=pages;active=0;syncUI();persist();toast(`Собрана карусель: ${slides.length} страниц`);};
+loadStored();$('headerLogo').src=logoData;syncUI();
+window.__skooma={get slides(){return slides},get active(){return active},preview,drawCanvas,makeZip,async renderAll(type='image/jpeg',quality=0.92){const out=[];for(const s of slides){const c=await renderToNew(clone(s));out.push(c.toDataURL(type,quality));}return out;},applyVisualStyle(style,all=false){if(!style||!style.background)throw Error('Неизвестный дизайн-пресет');mutation(()=>{const indices=all?slides.map((_,i)=>i):[active];for(const i of indices){const prev=slides[i];slides[i]=normalize({...prev,stylePreset:style.id,bgMode:style.background,bgColor:style.bgColor,theme:style.theme,layout:style.layout,typeface:style.typeface,titleAlign:style.titleAlign,titleY:style.titleY,titleSize:style.titleSize,bgImage:null});}});},setBgImage(data,index=active){const d=safeDataURI(data);if(!d)throw Error('Картинка не подходит (нужен JPG/PNG до 6 МБ)');if(!slides[index])throw Error('Нет такого слайда');mutation(()=>{const s=slides[index];s.bgImage=d;s.bgFit='cover';s.bgX=50;s.bgY=50;s.dim=Math.max(55,s.dim||0);});},select(index){if(slides[index]){active=index;syncUI();}},async renderLayers(){const out=[];for(const s0 of slides){const s=clone(s0);const [w,h]=SIZE[s.format];const r=await new Promise(res=>imgFrom(logoData,lg=>imgFrom(s.bgImage,bg=>{const b=createCanvas(w,h),bc=b.getContext('2d');drawBackground(bc,s,w,h,COLORS[s.theme],bg);const f=createCanvas(w,h),fc=f.getContext('2d');fc.clearRect(0,0,w,h);titleBlock(fc,s,w,h,COLORS[s.theme]);drawBrand(fc,s,w,h,COLORS[s.theme],lg);res({bg:b.toDataURL('image/jpeg',0.92),fg:f.toDataURL('image/png')});})));out.push(r);}return out;},reset(){snapshot();slides=[normalize({...baseSlide(),title:'ТВОЙ\nЗАГОЛОВОК',subtitle:'Текст слайда',kicker:'КИНО',episode:''})];active=0;syncUI();persist();},loadGenerated(pages){if(!Array.isArray(pages)||!pages.length||pages.length>15)throw Error('Некорректное число слайдов');snapshot();slides=pages.map(page=>normalize({...baseSlide(),...page}));active=0;syncUI();persist();}};
+</script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="/cover-studio/style-presets.js" defer></script>
+<script src="/cover-studio/image-sync.js" defer></script>
+<script src="/cover-studio/ai.js" defer></script>
+<script src="/cover-studio/compact-ui.js" defer></script>
+<script>
+// «Назад»: в Ассистента (вкладка «Посты»). В Telegram — ещё и системная кнопка «назад» в шапке
+(function () {
+  const go = () => { if (document.referrer && new URL(document.referrer).host === location.host && history.length > 1) history.back(); else location.href = '/'; };
+  document.getElementById('backBtn')?.addEventListener('click', go);
+  const tg = window.Telegram?.WebApp;
+  try { if (tg?.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(go); } } catch {}
+})();
+</script>
+</body>
+</html>

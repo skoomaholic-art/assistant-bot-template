@@ -1,0 +1,97 @@
+/* Cover Studio compact navigation, scoped to controls. No canvas styling. */
+.cs-quickbar {
+  display:flex; align-items:center; gap:8px; padding:9px clamp(12px,2vw,28px);
+  background:#11161d; border-bottom:1px solid #303943; flex-wrap:wrap;
+}
+.cs-quickbar-label {font-size:10px; color:#98a6b3; font-weight:800; letter-spacing:.11em; margin-right:3px}
+.cs-quick-button {
+  border:1px solid #34404b; border-radius:999px; background:#1b242d; color:#f1ece3;
+  padding:8px 11px; font-size:12px; font-weight:650; min-height:36px; white-space:nowrap
+}
+.cs-quick-button:hover, .cs-quick-button:focus-visible {border-color:#f2aa4c;background:#2b251e}
+.cs-compact-ui aside .controls {gap:9px}
+.cs-compact-ui aside .cs-section {
+  border:1px solid #303944; border-radius:12px; margin:0; padding:0;
+  overflow:hidden; background:#171d24; min-width:0;
+}
+.cs-compact-ui .cs-fold {display:block; min-width:0}
+.cs-compact-ui .cs-fold-summary {
+  display:flex; gap:10px; align-items:center; min-height:59px;
+  padding:11px 12px; cursor:pointer; list-style:none; letter-spacing:normal;
+  user-select:none; border-radius:10px;
+}
+.cs-compact-ui .cs-fold-summary::-webkit-details-marker {display:none}
+.cs-compact-ui .cs-fold-summary::marker {content:''}
+.cs-compact-ui .cs-fold-summary:hover {background:#222b35}
+.cs-compact-ui .cs-fold[open] > .cs-fold-summary {
+  background:#202832; border-bottom:1px solid #35404b; border-radius:10px 10px 0 0
+}
+.cs-compact-ui .cs-fold-icon {
+  width:34px; height:34px; border:1px solid #404b57; border-radius:9px;
+  display:grid; place-items:center; flex:0 0 34px; background:#11171e;
+  font-size:16px; line-height:1
+}
+.cs-compact-ui .cs-fold-copy {flex:1; min-width:0; display:grid; gap:2px}
+.cs-compact-ui .cs-fold-copy strong {display:block; font-size:12.5px; color:#f1ece3; line-height:1.25}
+.cs-compact-ui .cs-fold-copy small {
+  color:#a0aab5; font-size:10.5px; line-height:1.35; font-weight:400;
+  overflow:hidden; text-overflow:ellipsis
+}
+.cs-compact-ui .cs-fold-chevron {
+  font-size:21px; color:#c0c9d0; transition:transform .17s ease;
+  line-height:1; display:inline-block; padding:0 1px
+}
+.cs-compact-ui .cs-fold[open] .cs-fold-chevron {transform:rotate(180deg)}
+.cs-compact-ui .cs-fold-body {padding:12px 12px 14px; min-width:0}
+.cs-compact-ui .cs-original-heading {display:none}
+.cs-compact-ui .cs-fold-body .section-sub:first-child {margin-top:0}
+.cs-compact-ui .cs-fold-body .inline-buttons {flex-wrap:wrap; min-width:0}
+.cs-compact-ui .cs-fold-body button {max-width:100%; white-space:normal}
+.cs-compact-ui .cs-fold-body textarea, .cs-compact-ui .cs-fold-body input {max-width:100%}
+.cs-compact-ui .cs-fold-body .cols2 {min-width:0}
+.cs-compact-ui .cs-fold-body .cols2 > * {min-width:0}
+.cs-compact-ui .cs-fold-summary:focus-visible {outline:2px solid #f2aa4c;outline-offset:-3px}
+@media (max-width:1170px) {
+  .cs-compact-ui aside.right .controls {grid-template-columns:1fr;gap:9px}
+}
+@media (max-width:720px) {
+  .cs-quickbar {flex-wrap:nowrap;overflow-x:auto;padding:8px 12px;gap:7px;scrollbar-width:thin}
+  .cs-quickbar-label {flex:0 0 auto}
+  .cs-quick-button {flex:0 0 auto;min-height:38px}
+  .cs-compact-ui aside.right {order:1}
+  .cs-compact-ui aside.left {order:2}
+  .cs-compact-ui aside.left,.cs-compact-ui aside.right {padding:12px}
+  .cs-compact-ui .cs-fold-body {padding:12px}
+}
+@media (prefers-reduced-motion:reduce) {
+  .cs-compact-ui .cs-fold-chevron {transition:none}
+  .cs-compact-ui .cs-quick-button {scroll-behavior:auto}
+}
+
+/* ---------- Телефон ---------- */
+.cs-head-tools {display:none}
+@media (max-width:720px) {
+  .cs-phone header {padding:8px 12px; flex-wrap:wrap; gap:8px}
+  .cs-phone .brand {flex:1; min-width:0}
+  .cs-phone .brand small, .cs-phone .brand .logo {display:none}
+  .cs-phone .brand b {font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .cs-phone .cs-head-tools {display:flex; gap:6px}
+  .cs-phone .cs-files-toggle {min-width:42px; min-height:40px; border-radius:10px; border:1px solid #34404b; background:#1b242d; color:#f1ece3; font-size:18px; font-weight:700}
+  .cs-phone .header-actions {display:none; width:100%}
+  .cs-phone.cs-files-open .header-actions {display:flex}
+  .cs-phone .cs-quickbar {position:sticky; top:0; z-index:30}
+  .cs-phone .cs-quickbar-label {display:none}
+  .cs-phone .square-section, .cs-phone .stage > .help {display:none}
+  .cs-phone .stage {padding:10px 10px 6px}
+  .cs-phone .top-stage h1 {font-size:15px !important}
+  .cs-phone aside.right {display:none}
+  .cs-phone body {padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+  .cs-phone .cs-fold-summary {min-height:54px}
+  .cs-actionbar {position:fixed; left:0; right:0; bottom:0; z-index:40; padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    background:rgba(11,14,18,.97); border-top:1px solid #303943; backdrop-filter:blur(12px)}
+  .cs-actionbar-row {display:flex; gap:8px}
+  .cs-ab-primary, .cs-ab-secondary {min-height:48px; border-radius:12px; font-weight:800; font-size:15px; border:1px solid #34404b}
+  .cs-ab-primary {flex:1; background:#f2aa4c; color:#14110c; border-color:#f2aa4c}
+  .cs-ab-secondary {flex:0 0 auto; padding:0 14px; background:#1b242d; color:#f1ece3}
+  .cs-ab-primary:disabled, .cs-ab-secondary:disabled {opacity:.6}
+}

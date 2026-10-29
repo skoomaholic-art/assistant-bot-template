@@ -1,0 +1,52 @@
+{
+  "headers": [
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "api/bot.js": {
+      "maxDuration": 60
+    },
+    "api/pipeline.js": {
+      "maxDuration": 60
+    },
+    "api/ai-draft.js": {
+      "maxDuration": 30
+    },
+    "api/pipeline-hook.js": {
+      "maxDuration": 60
+    },
+    "api/media.js": {
+      "maxDuration": 20
+    },
+    "api/auto-editor.js": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/auto-editor",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}

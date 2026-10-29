@@ -1,0 +1,1142 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Instagram Manager</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #101114);
+    --card: var(--tg-theme-secondary-bg-color, #1b1d22);
+    --text: var(--tg-theme-text-color, #f1f1f3);
+    --hint: var(--tg-theme-hint-color, #8d909c);
+    --link: var(--tg-theme-link-color, #6ab3f3);
+    --accent: var(--tg-theme-button-color, #e2493b);
+    --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    --line: color-mix(in srgb, var(--hint) 22%, transparent);
+    --ok: #2fae67; --warn: #e2a33b; --bad: #e0524a;
+    --r: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+  body { padding: 0 16px calc(24px + env(safe-area-inset-bottom)); }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 14px 0 10px; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  h1 small { display: block; font-size: 12px; font-weight: 500; color: var(--hint); letter-spacing: 0; }
+  .icon-btn { border: 0; background: var(--card); color: var(--text); width: 38px; height: 38px; border-radius: 50%;
+    font-size: 17px; cursor: pointer; }
+  .icon-btn.spin { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 12px; padding: 4px;
+    background: var(--card); border-radius: 12px; }
+  nav button { border: 0; background: transparent; color: var(--hint); padding: 8px 2px; border-radius: 9px;
+    font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  nav button.on { background: var(--bg); color: var(--text); }
+  .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px;
+    background: var(--accent); color: var(--accent-text); font-size: 11px; line-height: 18px; text-align: center; }
+  .chips { display: flex; gap: 6px; margin: 12px 0 4px; overflow-x: auto; }
+  .chip { border: 1px solid var(--line); background: transparent; color: var(--hint); padding: 5px 12px;
+    border-radius: 999px; font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
+  .chip.on { border-color: var(--accent); color: var(--text); }
+  .card { background: var(--card); border-radius: var(--r); padding: 14px; margin-top: 12px; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--hint); }
+  .tag { padding: 2px 8px; border-radius: 6px; background: var(--bg); color: var(--text); font-weight: 600; }
+  .tag.revise { color: var(--warn); }
+  .topic { font-weight: 650; margin: 8px 0 0; font-size: 16px; }
+  .quote { margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid var(--line); color: var(--hint); font-size: 14px;
+    white-space: pre-wrap; word-break: break-word; }
+  .quote b { color: var(--text); font-weight: 600; }
+  .proposal { margin: 10px 0 0; white-space: pre-wrap; word-break: break-word; }
+  .why { margin-top: 8px; font-size: 13px; color: var(--hint); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .btn { border: 0; border-radius: 10px; padding: 10px 6px; white-space: nowrap; font: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; background: var(--bg); color: var(--text); }
+  .btn.ok { background: var(--ok); color: #fff; }
+  .btn.bad { color: var(--bad); }
+  .btn.main { background: var(--accent); color: var(--accent-text); }
+  .btn:disabled { opacity: .5; }
+  textarea { width: 100%; min-height: 120px; margin-top: 10px; padding: 10px; border-radius: 10px; resize: vertical;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .count { font-size: 12px; color: var(--hint); text-align: right; margin-top: 4px; }
+  .empty { text-align: center; color: var(--hint); padding: 48px 12px; }
+  .empty .big { font-size: 40px; display: block; margin-bottom: 8px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .stat { background: var(--card); border-radius: var(--r); padding: 14px; }
+  .stat .v { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .stat .l { font-size: 12px; color: var(--hint); }
+  .list { background: var(--card); border-radius: var(--r); margin-top: 12px; }
+  .li { padding: 11px 14px; border-top: 1px solid var(--line); font-size: 14px; }
+  .li:first-child { border-top: 0; }
+  .li .sub { color: var(--hint); font-size: 12px; margin-top: 2px; word-break: break-word; }
+  .d-approve { color: var(--ok); } .d-reject { color: var(--bad); } .d-revise, .d-edit { color: var(--warn); }
+  .note { font-size: 13px; color: var(--hint); margin-top: 14px; }
+  .alert { background: var(--card); border-radius: var(--r); padding: 16px; margin-top: 16px; }
+  .alert h2 { margin: 0 0 6px; font-size: 17px; }
+  .id { font: 600 20px ui-monospace, Menlo, monospace; margin: 10px 0; user-select: all; }
+  a { color: var(--link); }
+  #toast { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 9;
+    padding: 12px 14px; border-radius: 12px; background: var(--text); color: var(--bg); font-weight: 600; font-size: 14px;
+    opacity: 0; transform: translateY(10px); transition: .2s; pointer-events: none; }
+  #toast.show { opacity: 1; transform: none; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--hint); margin: 22px 0 0; font-weight: 650; }
+  .stat .v.up { color: var(--ok); } .stat .v.down { color: var(--bad); }
+  .muted { color: var(--hint); }
+  .spark { width: 100%; height: auto; display: block; }
+  .spark-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+  .spark-area { fill: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .spark-dot { fill: var(--accent); }
+  .axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--hint); margin-top: 6px; }
+  .chart-empty { color: var(--hint); font-size: 14px; padding: 18px 4px; text-align: center; }
+  .bar { height: 8px; border-radius: 4px; background: var(--bg); overflow: hidden; margin-top: 8px; }
+  .bar span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .row-between { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .goal { font-weight: 600; }
+  .stage summary { display: flex; align-items: center; gap: 10px; list-style: none; cursor: pointer; }
+  .stage summary::-webkit-details-marker { display: none; }
+  .sic { width: 22px; text-align: center; color: var(--hint); }
+  .stt { flex: 1; font-weight: 600; }
+  .sst { font-size: 12px; color: var(--hint); }
+  .stage.done .sic { color: var(--ok); } .stage.done .stt { color: var(--hint); }
+  .stage.cur .sic { color: var(--accent); }
+  .stage .sub, .stage .tasks { margin-left: 32px; }
+  .tasks { margin: 8px 0 0; padding: 0; list-style: none; font-size: 14px; }
+  .tasks li { padding: 3px 0; color: var(--text); }
+  .tasks li.ok { color: var(--hint); text-decoration: line-through; }
+  .tasks li.tap { cursor: pointer; padding: 6px 0; }
+  .tasks li.tap:active { opacity: .6; }
+  .autotag { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 1px 6px;
+    border-radius: 5px; background: var(--bg); color: var(--hint); vertical-align: 2px; text-decoration: none; }
+  details.card summary { cursor: pointer; color: var(--hint); font-size: 14px; }
+  .list.flat { background: transparent; margin-top: 8px; }
+  .list.flat .li { padding-left: 0; padding-right: 0; }
+  .mini { border: 0; background: var(--bg); color: var(--text); border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .li .mini { margin-top: 6px; }
+  .li.news a { color: var(--text); text-decoration: none; font-weight: 600; }
+  .li.news .row-between { align-items: center; margin-top: 6px; }
+  .li.news .row-between .mini { margin-top: 0; }
+  .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .saved { color: var(--ok); font-weight: 600; }
+  .labrow { display: grid; grid-template-columns: 1fr 70px 38px 56px; gap: 8px; align-items: center; font-size: 14px; margin-top: 8px; }
+  .labrow .v { font-weight: 700; text-align: right; } .labrow .v.up { color: var(--ok); } .labrow .v.down { color: var(--bad); }
+  .mini-bar { margin-top: 0; height: 6px; }
+  details.li summary { list-style: none; cursor: pointer; } details.li summary::-webkit-details-marker { display: none; }
+  .row-gap { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .sections { display: grid; grid-template-columns: 1.2fr 1fr 0.8fr; gap: 8px; margin-top: 12px; }
+  .sections button { border: 1px solid var(--line); background: transparent; color: var(--hint); padding: 10px 6px; border-radius: 12px;
+    font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
+  .sections button.on { background: var(--card); color: var(--text); border-color: transparent; }
+  .mact { display: grid; grid-template-columns: 1fr 1fr 48px 48px; gap: 8px; margin-top: 12px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .custom { display: grid; grid-template-columns: 72px 1fr 64px; gap: 8px; margin-top: 10px; }
+  .custom input, .custom select { min-width: 0; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 10px; padding: 9px 10px; font: inherit; font-size: 15px; }
+  .snz { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-top: 10px; font-size: 13px; color: var(--warn); font-weight: 600; }
+  .glink { display: inline-block; margin-top: 8px; font-size: 13px; text-decoration: none; }
+  details.fold { margin-top: 6px; } details.fold summary { list-style: none; cursor: pointer; }
+  details.fold summary::-webkit-details-marker { display: none; }
+  details.fold summary h3::after { content: ' ▸'; } details.fold[open] summary h3::after { content: ' ▾'; }
+  /* нижняя панель разделов: под большим пальцем */
+  nav#igNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr);
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: var(--bg, #111); border-top: 1px solid var(--line); margin: 0; }
+  nav#igNav[hidden] { display: none; }
+  nav#igNav button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; min-height: 52px;
+    border: 0; background: transparent; color: var(--hint); font: inherit; font-size: 11px; font-weight: 650; border-radius: 12px; cursor: pointer; }
+  nav#igNav button .ni { font-size: 21px; line-height: 1.1; filter: grayscale(.6); opacity: .75; }
+  nav#igNav button.on { color: var(--text); background: var(--card); }
+  nav#igNav button.on .ni { filter: none; opacity: 1; }
+  nav#igNav button .badge { position: absolute; top: 2px; right: calc(50% - 22px); }
+  nav#igNav .xtab { display: none; }
+  body.ig-sec main { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+  .backlink { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 10px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .toplinks { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 10px; }
+  [hidden] { display: none !important; }
+  #sections { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Instagram Manager<small id="sub">&nbsp;</small></h1>
+    <div style="display:flex;gap:8px"><button class="icon-btn" id="homeBtn" aria-label="Иконка на экран «Домой»" title="Иконка на экран «Домой»" hidden>📲</button>
+    <button class="icon-btn" id="reload" aria-label="Обновить">↻</button></div>
+  </div>
+  <div class="sections" id="sections">
+    <button data-sec="ig" class="on">📷 Instagram<span class="badge" id="nPendingSec" hidden></span></button>
+    <button data-sec="more">🧩 Ещё</button>
+  </div>
+  <nav id="igNav" aria-label="Разделы Instagram">
+    <button data-tab="posts" class="on"><span class="ni">📝</span><span class="nl">Посты</span><span class="badge" id="nPosts" hidden></span></button>
+    <button data-tab="news"><span class="ni">📰</span><span class="nl">Новости</span></button>
+    <button data-tab="analytics"><span class="ni">📊</span><span class="nl">Аналитика</span></button>
+    <button data-tab="brain"><span class="ni">🧠</span><span class="nl">ИИ</span></button>
+    <button data-tab="plan"><span class="ni">🗺</span><span class="nl">План</span></button>
+    <button data-tab="review" class="xtab">Проверка<span class="badge" id="nPending" hidden></span></button>
+    <button data-tab="history" class="xtab">История</button>
+  </nav>
+</header>
+
+<main>
+  <div id="gate" hidden></div>
+
+  <section id="tab-posts"><div id="pipe"><div class="empty">Загружаю…</div></div></section>
+
+  <section id="tab-review" hidden>
+    <button class="backlink" data-goto="posts">← К постам</button>
+    <div class="chips">
+      <button class="chip on" data-f="all">Все</button>
+      <button class="chip" data-f="post">Публикации</button>
+      <button class="chip" data-f="comment">Комментарии</button>
+      <button class="chip" data-f="needs_revision">На доработке</button>
+    </div>
+    <div id="cards"></div>
+  </section>
+
+  <section id="tab-brain" hidden><div id="br"><div class="empty">Загружаю…</div></div></section>
+  <section id="tab-analytics" hidden><div id="an"><div class="empty">Загружаю…</div></div></section>
+  <section id="tab-plan" hidden>
+    <div class="card" style="display:flex;align-items:center;gap:12px;justify-content:space-between">
+      <div><b>🎨 Конструктор обложек</b><div style="font-size:12px;color:var(--hint)">Reels, карусели, свои шаблоны · экспорт PNG/ZIP</div></div>
+      <a href="/cover-studio/" style="flex:none;color:var(--tg-theme-button-text-color,#fff);background:var(--accent);padding:10px 13px;text-decoration:none;border-radius:10px;font-size:13px;font-weight:700">Открыть</a>
+    </div>
+    <div id="pl"><div class="empty">Загружаю…</div></div>
+  </section>
+
+  <section id="tab-news" hidden>
+    <div class="chips" id="newsChips"></div>
+    <div id="nw"><div class="empty">Загружаю…</div></div>
+  </section>
+
+  <section id="tab-mail" hidden><div id="ml"><div class="empty">Загружаю…</div></div></section>
+
+  <section id="tab-more" hidden>
+    <div class="list" id="services"></div>
+    <p class="note">Сюда будут добавляться другие проекты и инструменты</p>
+  </section>
+
+  <section id="tab-history" hidden>
+    <button class="backlink" data-goto="posts">← К постам</button>
+    <div class="stats" id="jcounts"></div>
+    <div class="list" id="journal"><div class="empty">Загружаю…</div></div>
+    <details style="margin-top:14px"><summary class="muted">Старая очередь карточек IGM</summary>
+      <div class="stats" id="counts"></div>
+      <div class="list" id="decisions"></div>
+    </details>
+  </section>
+
+  <p class="note" id="footNote">Одобрение только записывает решение в IGM. Публикация и ответы в Instagram включаются отдельно.</p>
+</main>
+<div id="toast"></div>
+
+<script>
+(() => {
+  const tg = window.Telegram?.WebApp;
+  tg?.ready(); tg?.expand();
+  const initData = tg?.initData || '';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const haptic = t => { try { tg?.HapticFeedback?.notificationOccurred(t); } catch {} };
+  const KIND = { post: 'Публикация', reply: 'Ответ', external_comment: 'Свой комментарий' };
+  const DEC = { approve: '✅ одобрено', reject: '❌ отклонено', revise: '✏️ на доработку', edit: '✏️ текст изменён', owner_reason: '💬 причина' };
+  const STATUS = { pending: 'ждёт', needs_revision: 'на доработке', approved: 'одобрено', rejected: 'отклонено' };
+  let data = null, filter = 'all', editing = null, rejecting = null, busy = false;
+
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2400); }
+  const fmtTime = iso => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Almaty' }); };
+
+  async function api(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ initData, ...body }) });
+    const j = await r.json().catch(() => ({ ok: false, error: 'Сервер недоступен' }));
+    if (!j.ok) throw j;
+    return j;
+  }
+
+  function gate(err) {
+    const g = $('gate'); g.hidden = false;
+    document.querySelectorAll('main > section, nav, #sections').forEach(el => (el.hidden = true));
+    if (err.self_id) {
+      g.innerHTML = `<div class="alert"><h2>Почти готово</h2>Твой Telegram ID:<div class="id">${esc(err.self_id)}</div>
+        Добавь его на Vercel в переменную <b>TG_OWNER_CHAT_ID</b>, сделай Redeploy и открой пульт снова.
+        <div class="row2"><button class="btn main" id="copyId">Скопировать ID</button><button class="btn" id="retry">Проверить</button></div></div>`;
+      $('copyId').onclick = () => navigator.clipboard?.writeText(err.self_id).then(() => toast('ID скопирован'), () => toast('Выдели ID и скопируй вручную'));
+    } else {
+      g.innerHTML = `<div class="alert"><h2>${initData ? 'Нет доступа' : 'Открой из Telegram'}</h2>${esc(err.error || 'Ошибка')}
+        ${initData ? '<div class="row2"><button class="btn" id="retry">Повторить</button></div>' : '<p class="note">Работает только внутри бота.</p>'}</div>`;
+    }
+    $('retry')?.addEventListener('click', load);
+  }
+
+  async function load() {
+    const btn = $('reload'); btn.classList.add('spin');
+    try {
+      data = await api('/api/state', {});
+      $('gate').hidden = true;
+      $('sections').hidden = false;
+      showSection(currentSection);
+      render();
+      loadPosts().then(() => {
+        const q = new URLSearchParams(location.search), pid = q.get('post');
+        if (pid && /^P\d{4,6}$/.test(pid) && q.get('schedule') === '1') { showTab('posts'); schedulePost(pid); history.replaceState(null, '', location.pathname); }
+      });
+    } catch (err) { gate(err); }
+    finally { btn.classList.remove('spin'); }
+  }
+
+  function visibleCards() {
+    return (data?.cards || []).filter(c =>
+      filter === 'all' ? true :
+      filter === 'post' ? c.kind === 'post' :
+      filter === 'comment' ? c.kind !== 'post' :
+      c.status === 'needs_revision');
+  }
+
+  function cardHtml(c) {
+    const isEdit = editing === c.id, isReject = rejecting === c.id;
+    const meta = [`<span class="tag">${esc(KIND[c.kind] || c.kind)}</span>`,
+      c.status === 'needs_revision' ? '<span class="tag revise">на доработке</span>' : '',
+      `<span>${esc(c.id)}</span>`, c.scheduled_for ? `<span>· ${esc(fmtTime(c.scheduled_for) || c.scheduled_for)}</span>` : ''].join('');
+    const quote = c.original_comment ? `<div class="quote">${c.target_username ? `<b>@${esc(String(c.target_username).replace(/^@/, ''))}</b>\n` : ''}${esc(c.original_comment)}</div>` : '';
+    const body = isReject
+      ? `<div class="proposal">${esc(c.proposed_text)}</div>
+         <textarea id="rj-${esc(c.id)}" maxlength="1000" placeholder="Почему отклоняешь? IGM учтёт это в следующих черновиках (можно пусто)"></textarea>
+         <div class="row2"><button class="btn" data-a="cancel" data-id="${esc(c.id)}">Отмена</button>
+         <button class="btn main" data-a="reject" data-id="${esc(c.id)}">✕ Отклонить</button></div>`
+      : isEdit
+      ? `<textarea id="ed-${esc(c.id)}" maxlength="2000">${esc(c.proposed_text)}</textarea>
+         <div class="count" id="cnt-${esc(c.id)}">${c.proposed_text.length} / 2000</div>
+         <div class="row2"><button class="btn" data-a="cancel" data-id="${esc(c.id)}">Отмена</button>
+         <button class="btn main" data-a="edit" data-id="${esc(c.id)}">Сохранить</button></div>`
+      : `<div class="proposal">${esc(c.proposed_text)}</div>
+         ${c.rationale ? `<div class="why">💡 ${esc(c.rationale)}</div>` : ''}
+         <div class="actions">
+           ${c.status === 'pending' ? `<button class="btn ok" data-a="approve" data-id="${esc(c.id)}">✓ Одобрить</button>` : '<span></span>'}
+           <button class="btn" data-a="open-edit" data-id="${esc(c.id)}">✎ Править</button>
+           ${c.status === 'pending' ? `<button class="btn bad" data-a="open-reject" data-id="${esc(c.id)}">✕ Отклонить</button>` : '<span></span>'}
+         </div>`;
+    return `<article class="card">${'<div class="meta">' + meta + '</div>'}
+      ${c.topic ? `<div class="topic">${esc(c.topic)}</div>` : ''}${quote}${body}</article>`;
+  }
+
+  function render() {
+    if (!data) return;
+    const pending = data.cards.filter(c => c.status === 'pending').length;
+    $('nPending').hidden = !pending; $('nPending').textContent = pending;
+    legacyPending = pending; secBadge();
+    const list = visibleCards();
+    $('cards').innerHTML = list.length ? list.map(cardHtml).join('')
+      : `<div class="empty"><span class="big">🗂</span>Новых карточек нет.<br>Когда IGM подготовит материал или ответ, он появится здесь.</div>`;
+    if (editing) {
+      const ta = $('ed-' + editing);
+      ta?.addEventListener('input', () => { $('cnt-' + editing).textContent = ta.value.length + ' / 2000'; });
+    }
+
+    if (data.snapshot) igName = '@' + (data.snapshot.username || 'mybrand');
+    if (currentSection === 'ig') $('sub').textContent = igName;
+
+    $('counts').innerHTML = Object.entries(data.counts).map(([k, v]) =>
+      `<div class="stat"><div class="v">${esc(v)}</div><div class="l">${esc(STATUS[k] || k)}</div></div>`).join('')
+      || '<div class="empty" style="grid-column:1/-1">Решений пока нет.</div>';
+    $('decisions').innerHTML = data.decisions.map(d => `<div class="li"><span class="d-${esc(d.decision)}">${esc(DEC[d.decision] || d.decision)}</span>
+      · ${esc(d.item_id)}${d.via === 'mini_app' ? ' · пульт' : ''}
+      <div class="sub">${esc(d.reason || d.text || d.topic || '')}</div><div class="sub">${esc(fmtTime(d.at_utc))}</div></div>`).join('');
+    $('decisions').hidden = !data.decisions.length;
+  }
+
+  async function act(id, action, text) {
+    if (busy) return; busy = true;
+    document.querySelectorAll('.btn').forEach(b => (b.disabled = true));
+    try {
+      const r = await api('/api/review', { id, action, text });
+      Object.assign(data, { cards: r.cards, counts: r.counts, decisions: r.decisions });
+      editing = null; rejecting = null;
+      haptic('success');
+      toast({ approve: 'Одобрено', reject: 'Отклонено', edit: 'Текст сохранён', why: 'Причина записана', revise: 'Отправлено на доработку' }[action]);
+      return true;
+    } catch (err) {
+      haptic('error'); toast(err.error || 'Не получилось');
+      if (err.self_id || [401, 403].includes(err.code)) gate(err);
+      return false;
+    } finally { busy = false; render(); }
+  }
+
+  const ask = (msg) => new Promise(res => tg?.showConfirm ? tg.showConfirm(msg, res) : res(confirm(msg)));
+  // ---------- Выбор времени публикации (Алматы, целый час 08–23) ----------
+  const ALM = 5 * 3600e3;
+  const almParts = ms => { const d = new Date(ms + ALM); return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate(), h: d.getUTCHours() }; };
+  const fromAlm = (y, m, d, h) => new Date(Date.UTC(y, m, d, h) - ALM).toISOString();
+  const fmtAlm = iso => { const p = almParts(Date.parse(iso)); return `${p.d}.${String(p.m + 1).padStart(2, '0')} в ${String(p.h).padStart(2, '0')}:00`; };
+  function pickSchedule(current, title = 'Когда публиковать?') {
+    return new Promise(resolve => {
+      const now = Date.now();
+      const days = Array.from({ length: 7 }, (_, i) => almParts(now + i * 86400e3));
+      const cur = current ? almParts(Date.parse(current)) : null;
+      let di = cur ? Math.max(0, days.findIndex(x => x.d === cur.d && x.m === cur.m)) : 0, hour = cur ? cur.h : null;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center';
+      const close = v => { wrap.remove(); resolve(v); };
+      const dayName = (x, i) => i === 0 ? 'Сегодня' : i === 1 ? 'Завтра' : `${x.d}.${String(x.m + 1).padStart(2, '0')}`;
+      const draw = () => {
+        const dd = days[di];
+        const ok = h => Date.parse(fromAlm(dd.y, dd.m, dd.d, h)) >= now + 30 * 60e3;
+        if (hour != null && !ok(hour)) hour = null;
+        wrap.innerHTML = `<div style="background:var(--bg2,#1c1f24);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))">
+          <div style="font-weight:700;font-size:17px;margin-bottom:4px">🕒 ${esc(title)}</div>
+          <div class="muted" style="font-size:12px;margin-bottom:10px">Время Алматы. Робот проверяет очередь раз в час, пост выйдет в течение ~20 минут после выбранного часа</div>
+          <div class="chips" style="margin:0 0 8px">${days.map((x, i) => `<button class="chip ${i === di ? 'on' : ''}" data-sd="${i}">${dayName(x, i)}</button>`).join('')}</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${Array.from({ length: 16 }, (_, k) => k + 8).map(h => `<button class="mini" data-sh="${h}" ${ok(h) ? '' : 'disabled style="opacity:.3"'} ${h === hour ? 'style="background:var(--accent);color:#fff"' : ''}>${String(h).padStart(2, '0')}:00</button>`).join('')}</div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn" data-sx="now" style="flex:1">Сразу после согласования</button>
+            <button class="btn primary" data-sx="ok" style="flex:1" ${hour == null ? 'disabled' : ''}>${hour == null ? 'Выбери час' : `Готово · ${dayName(dd, di)} ${String(hour).padStart(2, '0')}:00`}</button>
+          </div>
+          <button class="mini" data-sx="cancel" style="width:100%;margin-top:8px">Отмена</button></div>`;
+      };
+      wrap.addEventListener('click', e => {
+        if (e.target === wrap) return close(undefined);
+        const d = e.target.closest('[data-sd]'), h = e.target.closest('[data-sh]'), x = e.target.closest('[data-sx]');
+        if (d) { di = Number(d.dataset.sd); draw(); }
+        else if (h && !h.disabled) { hour = Number(h.dataset.sh); draw(); }
+        else if (x) { const dd = days[di]; close(x.dataset.sx === 'cancel' ? undefined : x.dataset.sx === 'now' ? null : fromAlm(dd.y, dd.m, dd.d, hour)); }
+      });
+      draw(); document.body.append(wrap);
+    });
+  }
+  // После выбора формата: сразу или отложить
+  async function askWhen() {
+    const choice = await new Promise(res => tg?.showPopup ? tg.showPopup({ title: 'Публикация', message: 'Когда выпустить пост после твоих согласований?', buttons: [{ id: 'now', type: 'default', text: '⚡ Сразу' }, { id: 'later', type: 'default', text: '🕒 Отложить' }, { id: 'x', type: 'cancel' }] }, id => res(id || 'x')) : res(confirm('Отложить публикацию?') ? 'later' : 'now'));
+    if (choice === 'x') return undefined;
+    if (choice === 'now') return null;
+    return pickSchedule(null);
+  }
+
+  $('cards').addEventListener('click', async e => {
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    const id = b.dataset.id, a = b.dataset.a;
+    if (a === 'open-edit') { editing = id; rejecting = null; render(); $('ed-' + id)?.focus(); return; }
+    if (a === 'open-reject') { rejecting = id; editing = null; render(); $('rj-' + id)?.focus(); return; }
+    if (a === 'cancel') { editing = null; rejecting = null; render(); return; }
+    if (a === 'edit') { const v = $('ed-' + id).value.trim(); if (!v) return toast('Текст пустой'); return act(id, 'edit', v); }
+    if (a === 'approve') { if (await ask('Одобрить карточку ' + id + '?')) act(id, 'approve'); return; }
+    if (a === 'reject') {
+      const reason = ($('rj-' + id)?.value || '').trim().slice(0, 1000);
+      if (await act(id, 'reject') && reason) await act(id, 'why', reason);
+    }
+  });
+
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
+    filter = c.dataset.f; editing = null; rejecting = null; render();
+  }));
+
+  // ---------- Разделы: Instagram (IGM) и Задачи ----------
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  const params = new URLSearchParams(location.search);
+  const startParam = String(tg?.initDataUnsafe?.start_param || '');
+  let igName = '@mybrand', igTab = 'posts';
+  let currentSection = ['ig', 'tasks', 'more'].find(x => x === params.get('section') || x === startParam) || store.get('section') || 'ig';
+  if (!['ig', 'tasks', 'more'].includes(currentSection)) currentSection = 'ig';
+  function showSection(sec) {
+    currentSection = sec; store.set('section', sec);
+    document.querySelectorAll('#sections button').forEach(b => b.classList.toggle('on', b.dataset.sec === sec));
+    $('igNav').hidden = sec !== 'ig';
+    document.body.classList.toggle('ig-sec', sec === 'ig');
+    $('sub').textContent = sec === 'ig' ? igName : sec === 'more' ? 'Другие проекты' : 'Задачи из Gmail';
+    showTab(sec === 'ig' ? igTab : sec === 'more' ? 'more' : 'mail');
+  }
+  document.querySelectorAll('#sections button').forEach(b => b.addEventListener('click', () => { showSection(b.dataset.sec); try { tg?.HapticFeedback?.selectionChanged(); } catch {} }));
+
+  // Иконка Instagram Manager на экран телефона (Telegram Bot API 8.0+: addToHomeScreen)
+  (function homeScreen() {
+    const btn = $('homeBtn');
+    if (!tg?.addToHomeScreen || !tg.isVersionAtLeast?.('8.0')) return;
+    const show = st => { btn.hidden = st === 'added' || st === 'unsupported'; };
+    try { tg.checkHomeScreenStatus?.(show); } catch { btn.hidden = false; }
+    btn.addEventListener('click', () => { try { tg.addToHomeScreen(); } catch { toast('Эта версия Telegram не умеет добавлять иконку'); } });
+    try { tg.onEvent('homeScreenAdded', () => { btn.hidden = true; toast('Иконка добавлена на экран'); }); } catch {}
+  })();
+
+  let currentTab = 'posts';
+  function showTab(t) {
+    currentTab = t;
+    if (t !== 'mail' && t !== 'more') igTab = t;
+    if (t === 'more') renderServices();
+    document.querySelectorAll('#igNav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+    ['review', 'posts', 'brain', 'analytics', 'plan', 'news', 'mail', 'history', 'more'].forEach(x => ($('tab-' + x).hidden = x !== t));
+    $('footNote').hidden = t !== 'review';
+    if (t === 'news' && !news && !newsLoading) loadNews();
+    if (t === 'mail' && !mail && !mailLoading) loadMail();
+    if (t === 'history') loadJournal();
+    if (t === 'posts') loadPosts();
+    if ((t === 'analytics' || t === 'plan' || t === 'brain') && !insights && !insightsLoading) loadInsights();
+  }
+  document.querySelectorAll('#igNav button').forEach(b => b.addEventListener('click', () => { showTab(b.dataset.tab); window.scrollTo(0, 0); try { tg?.HapticFeedback?.selectionChanged(); } catch {} }));
+  document.addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (!g) return; showTab(g.dataset.goto); window.scrollTo(0, 0); });
+  $('reload').addEventListener('click', () => {
+    load();
+    if (insights || currentTab === 'analytics' || currentTab === 'plan') loadInsights();
+    if (currentTab === 'news') loadNews(true);
+    if (currentTab === 'mail') loadMail();
+  });
+
+  // Отметка задач плана тапом
+  $('pl').addEventListener('click', async e => {
+    const li = e.target.closest('li[data-task]'); if (!li) return;
+    if (li.dataset.auto !== undefined) { toast('Закроется автоматически ' + (li.dataset.auto || '')); return; }
+    if (!li.classList.contains('tap')) return;
+    const done = li.dataset.done !== '1';
+    const title = li.textContent.replace(/^[✓○]\s*/, '').trim();
+    if (!(await ask((done ? 'Отметить выполненной?\n\n' : 'Вернуть в работу?\n\n') + title))) return;
+    li.style.opacity = '.5';
+    try {
+      await api('/api/plan', { stage: li.dataset.stage, task: Number(li.dataset.task), done });
+      haptic('success'); toast(done ? 'Готово ✓' : 'Вернул в работу');
+      await loadInsights();
+    } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); li.style.opacity = ''; }
+  });
+
+  // ---------- Конвейер постов (Проверка) ----------
+  let legacyPending = 0, postsWaiting = 0;
+  // бейдж на кнопке «Instagram»: всё, что ждёт решения
+  function secBadge() { const n = legacyPending + postsWaiting; $('nPendingSec').hidden = !n; $('nPendingSec').textContent = n; }
+  const postMore = new Set();
+  let posts = null, postsFilter = 'wait', openPost = null, postDetail = {};
+  const POST_FILTERS = [
+    ['wait', '⏳ Ждут меня', p => ['text_review', 'final_review', 'failed'].includes(p.status)],
+    ['sched', '🕒 Запланировано', p => p.status === 'scheduled' || (p.scheduled_at && !['published', 'rejected'].includes(p.status))],
+    ['work', '🎨 В сборке', p => ['rendering', 'publishing', 'publishing_in_progress'].includes(p.status)],
+    ['pub', '✅ Опубликовано', p => p.status === 'published' && !p.archived],
+    ['mine', '📥 У меня', p => p.status === 'handed_off'],
+    ['dup', '⚠️ Дубли', p => p.dup_of && p.status !== 'rejected'],
+    ['rej', '❌ Отклонено', p => p.status === 'rejected'],
+    ['arch', '📦 Архив', p => p.archived],
+    ['all', 'Все', () => true],
+  ];
+  const POST_BTNS = {
+    text_review: [['approve_text', '✅ Текст ок'], ['studio', '🎨 Править'], ['regen', '🔁 Другой вариант'], ['factcheck', '🔎 Факты'], ['reject', '❌ Отклонить']],
+    final_review: [['approve_final', '📤 Публиковать'], ['studio', '🎨 Вёрстка'], ['handoff', '📥 Опубликую сам'], ['redo', '📝 К тексту'], ['reject', '❌ Отклонить']],
+    failed: [['retry', '🔄 Повторить'], ['redo', '📝 К тексту'], ['reject', '❌ Отклонить']],
+    rejected: [['studio', '✏️ Править и вернуть']],
+    scheduled: [['publish_now', '📤 Сейчас'], ['schedule', '🕒 Перенести'], ['redo', '📝 К тексту'], ['reject', '❌ Отклонить']],
+  };
+  const POST_ASK = { approve_text: 'Согласовать текст и собрать пост?', approve_final: 'Опубликовать пост в Instagram?', redo: 'Вернуть пост к тексту? Финал придётся собрать заново', retry: 'Повторить сборку?',
+    reject: 'Отклонить пост? Потом его можно вернуть правкой в конструкторе', regen: 'ИИ перепишет текст. Новая карточка придёт в бот',
+    mark_archived: 'Ты уже перенёс эту публикацию в архив Instagram? Отметим её архивированной только в IGM.', mark_restored: 'Публикация снова видна в Instagram? Уберём отметку архива в IGM.',
+    handoff: 'Робот не будет публиковать: файлы в полном качестве и подпись придут тебе в бот, выложишь сам (можно с музыкой или в черновик)',
+    apply_images: 'Поставить найденные кадры из TMDB на слайды? Нажимая «Да», подтверждаешь право их использовать, в подпись добавится «© правообладатели»',
+    publish_now: 'Опубликовать прямо сейчас, не дожидаясь назначенного времени?',
+    copy_post: 'Создать новую редактируемую копию? Исходная публикация и статистика останутся без изменений.', factcheck: 'Проверить конкретные факты через Gemini и Google Search? Результат со ссылками придёт в Telegram.' };
+  async function loadPosts() {
+    if (!posts) $('pipe').innerHTML = '<div class="empty">Загружаю…</div>';
+    try { posts = (await api('/api/pipeline', { action: 'list' })).posts; renderPosts(); }
+    catch (err) { $('pipe').innerHTML = `<div class="empty">${esc(err.error || 'Не удалось загрузить')}</div>`; }
+  }
+  function postCard(p) {
+    const btns = [...(POST_BTNS[p.status] || [])];
+    if (p.suggested_images && ['text_review', 'final_review', 'failed'].includes(p.status)) btns.splice(1, 0, ['apply_images', `🎬 Взять кадры (${p.suggested_images})`]);
+    if (['text_review', 'final_review', 'failed', 'rendering'].includes(p.status)) btns.splice(1, 0, ['schedule', p.scheduled_at ? '🕒 ' + fmtAlm(p.scheduled_at) : '🕒 Время']);
+    if (p.status === 'published') btns.push(['copy_post', '⧉ Копия'], [p.archived ? 'mark_restored' : 'mark_archived', p.archived ? '↩ Из архива' : '📦 В архив']);
+    const d = postDetail[p.id];
+    return `<div class="li" data-post="${esc(p.id)}">
+      <div style="display:flex;gap:10px">
+        ${p.thumb ? `<img src="${esc(p.thumb)}" alt="" loading="lazy" style="width:58px;height:72px;object-fit:cover;border-radius:8px;flex:none;background:#222">` : ''}
+        <div style="flex:1;min-width:0">
+          <div class="row-between"><b>${esc(p.id)}</b><span class="sub">${esc(p.status_label)}</span></div>
+          <div style="font-weight:600;margin:2px 0">${esc(p.title || '—')}</div>
+          <div class="sub">${esc([p.kind_label, p.slides > 1 ? p.slides + ' слайдов' : p.format === 'reel' ? 'Reels' : 'пост', p.created_at_utc ? fmtTime(p.created_at_utc) : ''].filter(Boolean).join(' · '))}</div>
+        </div>
+      </div>
+      ${p.dup_of && p.status !== 'rejected' ? `<div class="sub" style="color:#ff9f43;margin-top:6px">⚠️ Похоже на ${esc(p.dup_of.id)} (${esc(p.dup_of.reason)}, ${esc({ published: 'опубликован', rejected: 'отклонён' }[p.dup_of.status] || 'в работе')})</div>` : ''}
+      ${p.copied_from ? `<div class="sub">⧉ Копия ${esc(p.copied_from)}</div>` : ''}
+      ${p.error ? `<div class="sub" style="color:var(--bad)">${esc(p.error)}</div>` : ''}
+      ${p.scheduled_at && !['published', 'rejected'].includes(p.status) ? `<div class="sub" style="color:#7fb2ff;margin-top:6px">🕒 ${p.status === 'scheduled' ? 'Выйдет' : 'Запланирован на'} ${esc(fmtAlm(p.scheduled_at))} по Алматы${p.status === 'scheduled' ? '' : ' (после твоих согласований)'}</div>` : ''}
+      ${p.status === 'rendering' ? '<div class="sub">Робот собирает финал, обычно 2–3 минуты. Он придёт в бот</div>' : ''}
+      ${openPost === p.id ? `<div class="card" style="margin-top:8px;font-size:13px">${!d ? 'Загружаю…' : `
+        ${d.slides.map((x, i) => `<div style="margin-bottom:6px"><b>${i + 1}. ${esc(x.title)}</b>${x.subtitle ? `<div class="sub">${esc(x.subtitle)}</div>` : ''}</div>`).join('')}
+        ${d.caption ? `<div class="muted" style="margin-top:8px">Подпись</div><div style="white-space:pre-wrap">${esc(d.caption)}</div>` : ''}
+        ${d.link ? `<div style="margin-top:6px"><a href="${esc(d.link)}" data-ext>📰 Исходная новость</a></div>` : ''}`}</div>` : ''}
+      ${(() => {
+        const list = btns.filter(([a]) => !(a === 'studio' && p.kind === 'own'));
+        const PRIMARY = ['approve_text', 'approve_final', 'retry', 'publish_now'];
+        const main = list.find(([a]) => PRIMARY.includes(a));
+        const QUICK = ['apply_images', 'studio', 'schedule', 'copy_post'];
+        const quick = list.filter(([a]) => QUICK.includes(a) && a !== main?.[0]);
+        const rest = list.filter(x => x !== main && !quick.includes(x));
+        const b = ([a, l], extra = '') => `<button class="mini" data-pa="${a}" data-pid="${esc(p.id)}"${a === 'reject' ? ' style="color:var(--bad)"' : ''}${extra}>${l}</button>`;
+        const more = postMore.has(p.id);
+        return `${main ? `<button class="btn" data-pa="${main[0]}" data-pid="${esc(p.id)}" style="width:100%;margin-top:10px;min-height:44px;background:var(--accent);color:#fff">${main[1]}</button>` : ''}
+        <div class="row-gap" style="margin-top:8px">
+          <button class="mini" data-pmore="${esc(p.id)}">${openPost === p.id ? '▲ Свернуть' : '▼ Текст'}</button>
+          ${p.permalink ? `<a class="mini" href="${esc(p.permalink)}" data-ext style="text-decoration:none">📷 Instagram</a>` : ''}
+          ${quick.map(x => b(x)).join('')}
+          ${rest.length ? `<button class="mini" data-pmenu="${esc(p.id)}">${more ? '✕' : '⋯ Ещё'}</button>` : ''}
+        </div>
+        ${rest.length && more ? `<div class="row-gap" style="margin-top:6px">${rest.map(x => b(x)).join('')}</div>` : ''}`;
+      })()}</div>
+    </div>`;
+  }
+  async function schedulePost(id) {
+    const p = (posts || []).find(x => x.id === id);
+    const at = await pickSchedule(p?.scheduled_at || null, `Время публикации ${id}`);
+    if (at === undefined) return;
+    try {
+      await api('/api/pipeline', { action: 'schedule', id, at });
+      haptic('success'); toast(at ? `${id} выйдет ${fmtAlm(at)}` : `${id}: публикация сразу после согласования`); await loadPosts();
+    } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); }
+  }
+  function renderPosts() {
+    const all = posts || [];
+    const counts = Object.fromEntries(POST_FILTERS.map(([k, , f]) => [k, all.filter(f).length]));
+    const waitN = counts.wait;
+    $('nPosts').hidden = !waitN; $('nPosts').textContent = waitN; postsWaiting = waitN; secBadge();
+    const list = all.filter(POST_FILTERS.find(([k]) => k === postsFilter)[2]);
+    const legacy = (data?.cards || []).length;
+    $('pipe').innerHTML = `<div class="toplinks"><button class="backlink" data-goto="history" style="margin:0">📜 Журнал</button>${legacy ? `<button class="backlink" data-goto="review" style="margin:0">🗂 Карточки IGM · ${legacy}</button>` : ''}</div><div class="chips">${POST_FILTERS.map(([k, l]) => `<button class="chip ${postsFilter === k ? 'on' : ''}" data-post-filter="${k}">${l}${counts[k] ? ' · ' + counts[k] : ''}</button>`).join('')}</div>`
+      + (list.length ? `<div class="list">${list.map(postCard).join('')}</div>`
+        : `<div class="empty">${{ wait: 'Ничего не ждёт твоего решения 👌', dup: 'Дублей нет', work: 'Сейчас ничего не собирается' }[postsFilter] || 'В этом разделе постов пока нет'}</div>`)
+      + '<p class="note">Дубли: посты по той же новости или той же теме. Отклонённый пост можно вернуть: «✏️ Править и вернуть», потом отправить из конструктора</p>';
+  }
+  $('pipe').addEventListener('click', async e => {
+    const filter = e.target.closest('[data-post-filter]');
+    if (filter) { postsFilter = filter.dataset.postFilter; openPost = null; renderPosts(); return; }
+    const pm = e.target.closest('[data-pmenu]');
+    if (pm) { const id = pm.dataset.pmenu; postMore.has(id) ? postMore.delete(id) : postMore.add(id); renderPosts(); return; }
+    const more = e.target.closest('[data-pmore]');
+    if (more) {
+      const id = more.dataset.pmore;
+      openPost = openPost === id ? null : id; renderPosts();
+      if (openPost && !postDetail[id]) {
+        try { const { post } = await api('/api/pipeline', { action: 'get', id }); postDetail[id] = { slides: post.draft?.slides || [], caption: post.draft?.caption || '', link: post.source?.link || null }; }
+        catch { postDetail[id] = { slides: [], caption: 'Не удалось загрузить' }; }
+        renderPosts();
+      }
+      return;
+    }
+    const b = e.target.closest('[data-pa]'); if (!b) return;
+    const id = b.dataset.pid, a = b.dataset.pa;
+    if (a === 'studio') { location.href = '/cover-studio/?post=' + encodeURIComponent(id); return; }
+    if (a === 'schedule') { await schedulePost(id); return; }
+    if (!(await ask(POST_ASK[a] + '\n\n' + id))) return;
+    b.disabled = true; const label = b.textContent; b.textContent = '⏳';
+    try {
+      const out = await api('/api/pipeline', { action: a, id });
+      haptic('success');
+      toast({ apply_images: 'Кадры поставлены', publish_now: 'Публикую, ссылка придёт в бот', approve_text: 'Текст согласован, финал придёт в бот через 2–3 минуты', approve_final: 'Публикую, ссылка придёт в бот', reject: 'Отклонён', regen: 'Новый вариант текста в боте', redo: 'Вернул к тексту', retry: 'Запустил сборку заново', factcheck: 'Проверка фактов придёт в бот' }[a] || 'Готово');
+      if (a === 'copy_post') { location.href = '/cover-studio/?post=' + encodeURIComponent(out.post.id); return; }
+      delete postDetail[id]; await loadPosts();
+    } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); b.disabled = false; b.textContent = label; }
+  });
+
+  // ---------- 🧠 ИИ: насколько обучен редактор ----------
+  let brainPace = null;
+  function renderBrain() {
+    const b = insights?.brain;
+    if (!b) { $('br').innerHTML = '<div class="empty">Данных пока нет</div>'; return; }
+    const hue = Math.round(b.score * 1.2); // 0 красный → 120 зелёный
+    const color = `hsl(${hue},75%,55%)`;
+    const R = 54, C = 2 * Math.PI * R, off = C * (1 - b.score / 100);
+    const nextGap = b.next ? b.next.at - b.score : 0;
+    const f = b.facts;
+    if (brainPace == null) brainPace = [1, 2, 3, 5].reduce((best, p) => Math.abs(p - f.pace) < Math.abs(best - f.pace) ? p : best, 1);
+    const fc = b.forecast.find(x => x.pace === brainPace) || b.forecast[0];
+    const lvlColor = s => `hsl(${Math.round(s * 1.2)},70%,55%)`;
+    const ladderIdx = b.levels.findIndex((l, i) => b.score >= l.min && (i === b.levels.length - 1 || b.score < b.levels[i + 1].min));
+    $('br').innerHTML = `
+      <div class="card" style="display:flex;gap:16px;align-items:center">
+        <svg width="132" height="132" viewBox="0 0 132 132" style="flex:none" role="img" aria-label="Интеллект ${b.score} из 100">
+          <circle cx="66" cy="66" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="12"/>
+          <circle cx="66" cy="66" r="${R}" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 66 66)"/>
+          <text x="66" y="66" text-anchor="middle" font-size="34" font-weight="800" fill="currentColor">${b.score}</text>
+          <text x="66" y="88" text-anchor="middle" font-size="12" fill="currentColor" opacity=".55">из 100</text>
+        </svg>
+        <div style="min-width:0">
+          <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em">Интеллект ИИ-редактора</div>
+          <div style="font-size:22px;font-weight:800;color:${color};margin:2px 0">${esc(b.level[0].toUpperCase() + b.level.slice(1))}</div>
+          <div style="font-weight:600">🧒 ${esc(b.age)}</div>
+          <div class="sub" style="margin-top:4px">${esc(b.note)}</div>
+          ${b.next ? `<div class="sub" style="margin-top:6px">До уровня «${esc(b.next.name)}»: ${nextGap} ${nextGap === 1 ? 'балл' : nextGap < 5 ? 'балла' : 'баллов'}</div>` : ''}
+        </div>
+      </div>
+
+      <h3>Из чего складывается</h3>
+      <div class="card">${Object.values(b.parts).map(p => `<div style="margin:8px 0">
+        <div class="row-between"><span><b>${esc(p.label)}</b> <span class="muted" style="font-size:12px">· ${esc(p.hint)}</span></span><b style="white-space:nowrap;margin-left:8px">${Math.round(p.value)} / ${p.max}</b></div>
+        <div style="height:8px;border-radius:6px;background:rgba(255,255,255,.07);margin-top:5px;overflow:hidden"><div style="height:100%;width:${Math.round(p.value / p.max * 100)}%;background:${lvlColor(p.value / p.max * 100)};border-radius:6px"></div></div></div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px">
+        ${[[b.accuracy.text + '%', 'текстов без правок'], [b.accuracy.final + '%', 'финалов без правок'], [f.rules, 'правил выучено'], [b.accuracy.decisions, 'твоих решений'], [f.published, 'постов опыта'], [f.measured, 'постов замерено']]
+          .map(([v, l]) => `<div style="text-align:center;padding:9px 2px;border-radius:10px;background:rgba(255,255,255,.04)"><div style="font-size:18px;font-weight:700">${esc(v)}</div><div class="muted" style="font-size:11px">${esc(l)}</div></div>`).join('')}
+      </div>
+      ${f.medianReach < 50 ? `<p class="note">Понимание аудитории почти на нуле: посты пока видят единицы людей, по таким цифрам выводы делать нельзя. Оно вырастет вместе с подписчиками</p>` : ''}
+
+      <h3>Прогноз</h3>
+      <div class="card">
+        <div class="sub" style="margin-bottom:8px">Если публиковать в день:</div>
+        <div class="chips" style="margin:0 0 10px">${b.forecast.map(x => `<button class="chip ${x.pace === brainPace ? 'on' : ''}" data-pace="${x.pace}">${x.pace} ${x.pace === 1 ? 'пост' : x.pace < 5 ? 'поста' : 'постов'}</button>`).join('')}</div>
+        <div class="muted" style="font-size:12px;margin-bottom:8px">Твой темп сейчас: ≈${esc(String(f.pace).replace('.', ','))} в день</div>
+        ${[{ days: 0, score: b.score, level: b.level, age: b.age }, ...fc.points].map((p, i) => `<div style="display:flex;align-items:center;gap:10px;margin:7px 0">
+          <div style="width:96px;flex:none;white-space:nowrap" class="muted">${p.days === 0 ? 'сейчас' : p.days === 30 ? 'через месяц' : p.days === 90 ? 'через 3 мес' : 'через полгода'}</div>
+          <div style="flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden"><div style="height:100%;width:${p.score}%;background:${lvlColor(p.score)};border-radius:6px"></div></div>
+          <div style="width:30px;text-align:right;font-weight:700">${p.score}</div></div>
+          ${i ? `<div class="sub" style="margin:-4px 0 6px 106px">${esc(p.level)} · ${esc(p.age)}</div>` : ''}`).join('')}
+        <div style="margin-top:10px;font-weight:600">${fc.to_good ? `🎯 Уровень «хороший» (как у студента-журналиста) примерно через ${fc.to_good} ${fc.to_good % 10 === 1 && fc.to_good % 100 !== 11 ? 'день' : [2, 3, 4].includes(fc.to_good % 10) && ![12, 13, 14].includes(fc.to_good % 100) ? 'дня' : 'дней'}` : '🎯 При таком темпе «хороший» уровень дальше двух лет'}</div>
+        <div class="sub" style="margin-top:6px">Прогноз приблизительный: считает, что ты и дальше правишь и согласовываешь посты, а аудитория растёт</div>
+      </div>
+
+      <h3>Как учить быстрее</h3>
+      <div class="card"><ul class="tasks" style="margin:0">
+        <li>✏️ Правь тексты и вёрстку в конструкторе: каждая правка превращается в правило</li>
+        <li>💬 Нажимая «🔁 Другой вариант», пиши, что не так: ИИ запомнит причину</li>
+        <li>🎬 Выпускай Reels: лаборатории нужны разные форматы для сравнения</li>
+        <li>📈 Растущий охват даёт ИИ понимание аудитории, без подписчиков он учится только у тебя</li>
+      </ul></div>
+
+      <h3>Шкала</h3>
+      <div class="card">${b.levels.map((l, i) => `<div style="display:flex;gap:10px;align-items:center;padding:5px 0;${i === ladderIdx ? 'font-weight:700' : 'opacity:.6'}">
+        <span style="width:10px;height:10px;border-radius:50%;flex:none;background:${lvlColor(l.min + 4)}"></span>
+        <span style="width:34px" class="muted">${l.min}+</span><span style="flex:1">${esc(l.name)}</span><span class="muted" style="font-size:12px">${esc(l.age)}</span>${i === ladderIdx ? ' ◀' : ''}</div>`).join('')}</div>`;
+  }
+  $('br').addEventListener('click', e => { const c = e.target.closest('[data-pace]'); if (!c) return; brainPace = Number(c.dataset.pace); renderBrain(); });
+
+  // ---------- 🧩 Ещё: другие проекты владельца ----------
+  const SERVICES = [
+  ];
+  function renderServices() {
+    $('services').innerHTML = SERVICES.map((x, i) => `<button class="li" data-svc="${i}" style="display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;cursor:pointer">
+      <span style="font-size:28px">${x.icon}</span><span style="flex:1"><b>${esc(x.title)}</b><div class="sub">${esc(x.sub)}</div></span><span class="muted">↗</span></button>`).join('');
+  }
+  $('services').addEventListener('click', e => { const b = e.target.closest('[data-svc]'); if (!b) return; const x = SERVICES[Number(b.dataset.svc)]; try { tg?.openLink ? tg.openLink(x.url) : window.open(x.url, '_blank'); } catch { location.href = x.url; } });
+
+  // ---------- История постов ----------
+  const EV = { created: '🆕 создан', text_updated: '✏️ текст изменён', approve_text: '👍 текст согласован', rendered: '🎨 собран финал', rerender: '🔁 пересборка',
+    approve_final: '👍 финал согласован', publish_started: '📤 публикация', published: '✅ опубликован', reject: '❌ отклонён', reopened: '↩️ возвращён в работу',
+    layout_updated: '📐 вёрстка изменена', format_changed: '🔀 формат изменён', background_added: '🖼 картинка', background_removed: '🗑 картинка убрана', prompts_updated: '🔄 новые промпты', failed: '⚠️ ошибка' };
+  const ST = { text_review: '📝 текст', rendering: '🎨 сборка', final_review: '🖼 финал', published: '✅ опубликовано', rejected: '❌ отклонено', failed: '⚠️ ошибка' };
+  let journalAt = 0;
+  async function loadJournal() {
+    if (Date.now() - journalAt < 30000) return;
+    journalAt = Date.now();
+    try {
+      const j = await api('/api/pipeline', { action: 'journal' });
+      $('jcounts').innerHTML = Object.entries(ST).filter(([k]) => j.counts[k]).map(([k, l]) => `<div class="stat"><div class="v">${esc(j.counts[k])}</div><div class="l">${esc(l)}</div></div>`).join('');
+      let day = '';
+      $('journal').innerHTML = j.events.length ? j.events.map(e => {
+        const d = new Date(e.at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+        const head = d !== day ? `<div class="muted" style="margin:12px 0 4px;font-weight:600">${esc(day = d)}</div>` : '';
+        return head + `<div class="li"><b>${esc(EV[e.event] || e.event)}</b> · ${esc(e.id)}${e.by ? ' · ' + esc(e.by) : ''}
+          <div class="sub">${esc(e.title)}${e.note ? ' · ' + esc(e.note) : ''}</div>
+          <div class="sub">${esc(new Date(e.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }))}${e.event === 'published' && e.permalink ? ` · <a href="${esc(e.permalink)}" data-ext>открыть в Instagram</a>` : ''}</div></div>`;
+      }).join('') : '<div class="empty">Постов пока не было</div>';
+    } catch (err) { journalAt = 0; $('journal').innerHTML = `<div class="empty">${esc(err.error || 'Не удалось загрузить')}</div>`; }
+  }
+
+  // ---------- Новости (RSS) ----------
+  let news = null, newsLoading = false, newsFilter = 'all';
+  const ago = iso => {
+    if (!iso) return '';
+    const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
+    if (m < 60) return Math.max(1, m) + ' мин';
+    if (m < 1440) return Math.round(m / 60) + ' ч';
+    return Math.round(m / 1440) + ' дн';
+  };
+  async function loadNews(force) {
+    newsLoading = true;
+    if (!news) $('nw').innerHTML = '<div class="empty">Собираю ленты…</div>';
+    try { news = await api('/api/news', { action: 'list', force: Boolean(force) }); renderNews(); }
+    catch (err) { $('nw').innerHTML = `<div class="empty">${esc(err.error || 'Не удалось загрузить')}</div>`; }
+    finally { newsLoading = false; }
+  }
+  function renderNews() {
+    const savedLinks = new Set(news.saved.map(x => x.link));
+    const hotN = news.items.filter(x => x.hot).length;
+    const chips = [['all', 'Все'], ['hot', `🔥${hotN ? ' ' + hotN : ''}`], ['ru', 'RU'], ['en', 'EN'], ['obit', '🕯 Некролог'], ['bday', '🎂 ДР'], ['saved', `Идеи${news.saved.length ? ' · ' + news.saved.length : ''}`], ['src', 'Источники']];
+    $('newsChips').innerHTML = chips.map(([k, l]) => `<button class="chip ${newsFilter === k ? 'on' : ''}" data-nf="${k}">${esc(l)}</button>`).join('');
+    if (newsFilter === 'src') {
+      $('nw').innerHTML = `<div class="list">${news.sources.map(s => `<div class="li">${s.ok ? '✅' : '⚠️'} ${esc(s.title)} <span class="muted">· ${esc(s.lang.toUpperCase())}</span>
+        <div class="sub">${s.ok ? esc(s.count) + ' материалов' : esc(s.error || 'нет данных')}</div></div>`).join('')}</div>
+        <p class="note">Список лент — content/news-sources.json в IGM. Обновлено ${esc(fmtTime(news.fetched_at))}.</p>`;
+      return;
+    }
+    if (newsFilter === 'obit' || newsFilter === 'bday') { renderPeople(); return; }
+    if (newsFilter === 'saved') {
+      $('nw').innerHTML = news.saved.length ? `<div class="list">${news.saved.map(x => `<div class="li"><a href="${esc(x.link)}" data-ext>${esc(x.title)}</a>
+        <div class="sub">${esc(x.source || '')} · сохранено ${esc(fmtTime(x.saved_at_utc))}</div>
+        <button class="mini" data-unsave="${esc(x.link)}">Убрать</button></div>`).join('')}</div>
+        <p class="note">Идеи лежат в IGM (data/news/saved.json). Факты перед постом проверяем по первоисточнику.</p>`
+        : '<div class="empty"><span class="big">💡</span>Отмечай новости кнопкой «В идеи» — они соберутся здесь.</div>';
+      return;
+    }
+    const list = news.items.filter(x => newsFilter === 'all' || (newsFilter === 'hot' ? x.hot : x.lang === newsFilter));
+    const marks = news.marks || {};
+    const markHtml = m => !m ? '' : m.state === 'published'
+      ? `<div class="sub" style="color:var(--ok,#3cbe6e)">✅ Опубликовано · ${esc(m.id)}${m.permalink ? ` · <a href="${esc(m.permalink)}" data-ext>открыть</a>` : ''}</div>`
+      : `<div class="sub" style="color:var(--accent,#f2aa4c)">✍️ В работе · ${esc(m.id)}</div>`;
+    $('nw').innerHTML = list.length ? `<div class="list">${list.map((x, i) => `<div class="li news"${marks[x.link] ? ' style="opacity:.78"' : ''}>
+        ${x.hot ? `<div class="sub" style="color:#ff7a45;font-weight:600">🔥 Горячее · ${esc(x.hot_reason || '')}</div>` : ''}
+        ${markHtml(marks[x.link])}
+        ${!marks[x.link] && (news.related || {})[x.link] ? `<div><button class="mini" data-related="${i}" style="margin:2px 0 6px">🔗 Связано с ${esc(news.related[x.link].id)}${news.related[x.link].state === 'published' ? ' (опубликован)' : ' (в работе)'}</button></div>` : ''}
+        <a href="${esc(x.link)}" data-ext>${esc(x.title)}</a>
+        ${x.summary && x.summary !== x.title ? `<div class="sub clamp">${esc(x.summary)}</div>` : ''}
+        <div class="row-between sub"><span>${esc(x.source_title)}${x.date ? ' · ' + esc(ago(x.date)) : ''}</span>
+        <span class="row-gap">${savedLinks.has(x.link) ? '<span class="saved">✓ в идеях</span>' : `<button class="mini" data-save="${i}">💡 В идеи</button>`}<button class="mini" data-mkpost="${i}">✍️ Пост</button></span></div></div>`).join('')}</div>`
+      : `<div class="empty">${newsFilter === 'hot' ? 'Сейчас нет историй, о которых пишут сразу несколько изданий' : 'Свежих новостей нет. Загляни во вкладку «Источники».'}</div>`;
+    $('nw')._list = list;
+  }
+  // ---------- Некролог и дни рождения (Википедия) ----------
+  let people = null, peopleLoading = false;
+  const years = n => { const a = n % 10, b = n % 100; return n + ' ' + (a === 1 && b !== 11 ? 'год' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'года' : 'лет'); };
+  const langs = n => { const a = n % 10, b = n % 100; return n + ' ' + (a === 1 && b !== 11 ? 'язык' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'языка' : 'языков'); };
+  async function renderPeople() {
+    if (!people) {
+      $('nw').innerHTML = '<div class="empty">Смотрю Википедию…</div>';
+      if (peopleLoading) return;
+      peopleLoading = true;
+      try { people = await api('/api/news', { action: 'people' }); }
+      catch (err) { $('nw').innerHTML = `<div class="empty">${esc(err.error || 'Не удалось загрузить')}</div>`; return; }
+      finally { peopleLoading = false; }
+      if (newsFilter !== 'obit' && newsFilter !== 'bday') return;
+    }
+    const obit = newsFilter === 'obit';
+    const list = obit ? people.obits : people.birthdays;
+    const dm = iso => { const [, m, d] = iso.split('-'); return `${Number(d)}.${m}`; };
+    $('nw').innerHTML = (list.length ? `<div class="list">${list.map((p, i) => `<div class="li news">
+        <a href="${esc(p.link)}" data-ext>${obit ? '🕯' : '🎂'} ${esc(p.name_ru || p.name)}</a>${p.name_ru && p.name_ru !== p.name ? ` <span class="muted">${esc(p.name)}</span>` : ''}
+        <div class="sub">${obit ? `${esc(dm(p.date))} · ${esc(years(p.age))}` : p.died ? `${esc(p.born)}–${esc(p.died)} · ${esc(years(new Date().getFullYear() - p.born))} со дня рождения` : `исполняется ${esc(years(p.age))}`} · ${esc(p.about)}</div>
+        <div class="row-between sub"><span class="muted">Википедия · ${esc(langs(p.fame))}</span>
+        <span class="row-gap"><button class="mini" data-pplpost="${i}">✍️ Пост</button></span></div></div>`).join('')}</div>`
+      : `<div class="empty">${obit ? 'За последние две недели в Википедии нет известных людей кино' : 'Сегодня нет известных именинников из кино'}</div>`)
+      + `<p class="note">${obit ? 'Умершие за 14 дней: актёры, режиссёры, сценаристы. Перед постом проверь новость в официальных источниках, Википедию правят все' : 'Актёры и режиссёры, родившиеся сегодня'}. Сортировка по известности (в скольких Википедиях есть статья).</p>`;
+    $('nw')._people = list;
+  }
+  $('newsChips').addEventListener('click', e => { const c = e.target.closest('[data-nf]'); if (!c) return; newsFilter = c.dataset.nf; renderNews(); });
+  $('nw').addEventListener('click', async e => {
+    const rl = e.target.closest('[data-related]');
+    if (rl) {
+      const it = $('nw')._list[Number(rl.dataset.related)], r = news.related[it.link];
+      const msg = `Пост ${r.id}: «${r.title}»${r.state === 'published' ? ', опубликован' : ', ещё в работе'}${r.at ? ' ' + fmtTime(r.at) : ''}.\nТема: ${r.topic}`.slice(0, 250);
+      const buttons = [...(r.permalink ? [{ id: 'ig', type: 'default', text: '📷 Пост в Instagram' }] : []), ...(r.news_link ? [{ id: 'src', type: 'default', text: '📰 Исходная новость' }] : []), { id: 'x', type: 'cancel' }];
+      const go = id => { const url = id === 'ig' ? r.permalink : id === 'src' ? r.news_link : null; if (url) (tg?.openLink ? tg.openLink(url) : window.open(url, '_blank')); };
+      if (tg?.showPopup) tg.showPopup({ title: 'Уже было по этой теме', message: msg, buttons: buttons.slice(0, 3) }, go); else { alert(msg); go(r.permalink ? 'ig' : 'src'); }
+      return;
+    }
+    const pp = e.target.closest('[data-pplpost]');
+    if (pp) {
+      const p = $('nw')._people[Number(pp.dataset.pplpost)], obit = newsFilter === 'obit', name = p.name_ru || p.name;
+      const kind = await new Promise(res => tg?.showPopup ? tg.showPopup({ title: 'Какой формат?', message: (obit ? 'Памяти: ' : 'С днём рождения: ') + name, buttons: [{ id: 'post', type: 'default', text: '🖼 Пост' }, { id: 'carousel', type: 'default', text: '📚 Карусель' }, { id: 'reel', type: 'default', text: '🎬 Reels' }] }, id => res(id || null)) : res(confirm('Сделать пост?') ? 'post' : null));
+      if (!kind) return;
+      const when = await askWhen(); if (when === undefined) return;
+      pp.disabled = true; pp.textContent = '✍️ Пишу…';
+      const topic = obit ? `Памяти ${name}: за что мы запомним его роли и фильмы` : `${name}: день рождения${p.age ? ', ' + p.age : ''}. Лучшие роли и почему его стоит пересмотреть`;
+      const facts = obit ? `${p.name} (${name}), ${p.age} лет, умер(ла) ${p.date}. ${p.about}. Источник: ${p.link}. Тон уважительный, без сенсационности, причину смерти не обсуждать, факты о смерти перепроверить` : `${p.name} (${name}), родился(ась) в ${p.born} году${p.died ? `, умер(ла) в ${p.died}` : ''}. ${p.about}. Источник: ${p.link}`;
+      try {
+        const r = await api('/api/pipeline', { action: 'create', kind, topic: topic.slice(0, 220), facts: facts.slice(0, 1400), link: p.link, scheduled_at: when });
+        haptic('success'); toast(`Пост ${r.post.id}: текст в боте`); pp.textContent = '✓ в боте'; posts = null;
+      } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); pp.disabled = false; pp.textContent = '✍️ Пост'; }
+      return;
+    }
+    const mk = e.target.closest('[data-mkpost]');
+    if (mk) {
+      const it = $('nw')._list[Number(mk.dataset.mkpost)];
+      // ИИ советует формат: объём материала, характер новости, лаборатория, пробелы плана
+      mk.disabled = true; mk.textContent = '🤔 Подбираю формат…';
+      let rec = null;
+      try { rec = await api('/api/news', { action: 'recommend', item: { title: it.title, summary: it.summary, link: it.link, hot: it.hot, coverage: it.coverage } }); } catch {}
+      mk.disabled = false; mk.textContent = '✍️ Пост';
+      const NAMES = { post: '🖼 Пост', carousel: '📚 Карусель', reel: '🎬 Reels' };
+      const order = rec?.order || ['post', 'carousel', 'reel'];
+      const msg = rec ? `ИИ советует ${NAMES[rec.format]} (${rec.confidence}): ${rec.why}` : it.title;
+      const kind = await new Promise(res => tg?.showPopup ? tg.showPopup({ title: rec ? 'Совет: ' + NAMES[rec.format].split(' ').slice(1).join(' ') : 'Какой формат?', message: msg.slice(0, 250),
+        buttons: order.map((f, i) => ({ id: f, type: 'default', text: (i === 0 && rec ? '⭐ ' : '') + NAMES[f] })) }, id => res(id || null)) : res(confirm(msg + '\n\nСделать так?') ? order[0] : null));
+      if (!kind) return;
+      if (rec && kind !== rec.format) toast('Ок, делаю ' + NAMES[kind].split(' ').slice(1).join(' ') + ', ИИ запомнит выбор');
+      const when = await askWhen(); if (when === undefined) return;
+      mk.disabled = true; mk.textContent = '✍️ Пишу…';
+      try {
+        const facts = rec?.facts ? `${rec.facts}\nИсточник: ${it.source_title} ${it.link}` : `${it.title} (${it.source_title}) ${it.link}. ${it.summary || ''}`;
+        const r = await api('/api/pipeline', { action: 'create', kind, topic: it.title.slice(0, 220), facts: facts.slice(0, 1500), link: it.link, scheduled_at: when, recommended: rec?.format || null });
+        haptic('success'); toast(`Пост ${r.post.id}: текст в боте${when ? ', выйдет ' + fmtAlm(when) : ''}`); mk.textContent = '✓ в боте'; posts = null;
+        (news.marks ||= {})[it.link] = { state: 'in_work', id: r.post.id };
+      } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); mk.disabled = false; mk.textContent = '✍️ Пост'; }
+      return;
+    }
+    const s = e.target.closest('[data-save]'), u = e.target.closest('[data-unsave]');
+    if (!s && !u) return;
+    const btn = s || u; btn.disabled = true;
+    try {
+      const r = s ? await api('/api/news', { action: 'save', item: $('nw')._list[Number(s.dataset.save)] })
+                  : await api('/api/news', { action: 'unsave', link: u.dataset.unsave });
+      news.saved = r.saved; haptic('success'); toast(s ? 'Добавлено в идеи' : 'Убрано'); renderNews();
+    } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); btn.disabled = false; }
+  });
+
+  // ---------- Задачи из Gmail: новые / в работе / отложено / готово ----------
+  let mail = null, mailLoading = false;
+  const mailUi = { remind: null, del: null, custom: { n: 2, u: 'h' } };
+  const MST = { new: '🆕 новая', work: '🔧 в работе' };
+  const PRESETS = [['30 мин', 30], ['1 ч', 60], ['3 ч', 180], ['Завтра 9:00', 'tmr'], ['3 дня', 4320], ['Неделя', 10080]];
+  const UNIT = { m: 1, h: 60, d: 1440 };
+  // Минуты до завтрашних 9:00 по Алматы (UTC+5)
+  function toTomorrow9() {
+    const shift = 5 * 3600e3, now = Date.now(), l = new Date(now + shift);
+    return Math.max(1, Math.round((Date.UTC(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate() + 1, 9, 0) - shift - now) / 60000));
+  }
+  const plural = (n, a, b, c) => { const m = n % 100, k = n % 10; return m > 10 && m < 20 ? c : k === 1 ? a : k > 1 && k < 5 ? b : c; };
+  const isSnoozed = x => x.remindAt && Date.parse(x.remindAt) > Date.now();
+
+  async function loadMail() {
+    mailLoading = true;
+    if (!mail) $('ml').innerHTML = '<div class="empty">Читаю почту…</div>';
+    try { mail = await api('/api/mail', { action: 'list' }); renderMail(); }
+    catch (err) {
+      mail = null;
+      $('ml').innerHTML = err.code === 503
+        ? `<div class="alert"><h2>Почта не подключена</h2>${esc(err.error)}<p class="note">Инструкция — SETUP.md, раздел «Задачи из Gmail».</p></div>`
+        : `<div class="empty">${esc(err.error || 'Не удалось загрузить')}</div>`;
+    } finally { mailLoading = false; }
+  }
+
+  function mailCard(x) {
+    const id = esc(x.id), snoozed = isSnoozed(x);
+    let foot;
+    if (mailUi.del === x.id) {
+      foot = `<div class="why">Убрать из задач? Письмо останется в почте.</div>
+        <div class="row2"><button class="btn" data-m="cancel">Отмена</button><button class="btn bad" data-m="delete" data-id="${id}">🗑 Убрать</button></div>`;
+    } else if (mailUi.remind === x.id) {
+      foot = `<div class="why">Напомнить через…</div>
+        <div class="presets">${PRESETS.map(([l, v]) => `<button class="chip" data-m="remind" data-id="${id}" data-v="${v}">${l}</button>`).join('')}</div>
+        <div class="custom"><input type="number" inputmode="numeric" min="1" max="999" id="rmN" value="${esc(mailUi.custom.n)}" aria-label="Через сколько">
+          <select id="rmU" aria-label="Единица">${[['m', 'минут'], ['h', 'часов'], ['d', 'дней']].map(([v, l]) => `<option value="${v}"${mailUi.custom.u === v ? ' selected' : ''}>${l}</option>`).join('')}</select>
+          <button class="btn main" data-m="remind-custom" data-id="${id}">Ок</button></div>
+        <div class="row2" style="grid-template-columns:1fr"><button class="btn" data-m="cancel">Отмена</button></div>`;
+    } else {
+      foot = `<div class="mact">
+        <button class="btn ok" data-m="status" data-s="done" data-id="${id}">✓ Готово</button>
+        ${x.status === 'work' ? `<button class="btn" data-m="status" data-s="new" data-id="${id}">↩ В новые</button>` : `<button class="btn" data-m="status" data-s="work" data-id="${id}">🔧 В работу</button>`}
+        <button class="btn" data-m="open-remind" data-id="${id}">⏰</button>
+        <button class="btn bad" data-m="open-del" data-id="${id}" aria-label="Убрать из задач">🗑</button></div>`;
+    }
+    return `<article class="card mtask">
+      <div class="meta"><span class="tag ${x.status === 'work' ? 'revise' : ''}">${MST[x.status] || MST.new}</span>${x.unread ? '<span class="tag">непрочитано</span>' : ''}${x.starred ? '<span>⭐</span>' : ''}<span>${esc(x.from)}</span><span>· ${esc(fmtTime(x.date))}</span>${x.messages > 1 ? `<span>· ${esc(x.messages)} ${plural(x.messages, 'письмо', 'письма', 'писем')}</span>` : ''}</div>
+      <div class="topic">${esc(x.subject)}</div>
+      ${x.snippet ? `<div class="quote clamp">${esc(x.snippet)}</div>` : ''}
+      ${snoozed ? `<div class="snz">⏰ Напомню ${esc(fmtTime(x.remindAt))} <button class="mini" data-m="unremind" data-id="${id}">Отменить</button></div>` : ''}
+      ${x.link ? `<a class="glink" href="${esc(x.link)}" data-ext>Открыть в Gmail ↗</a>` : ''}
+      ${foot}</article>`;
+  }
+
+  function renderMail() {
+    const items = mail.items || [], done = mail.done || [];
+    const active = items.filter(x => !isSnoozed(x));
+    const work = active.filter(x => x.status === 'work'), fresh = active.filter(x => x.status !== 'work');
+    const later = items.filter(isSnoozed).sort((a, b) => Date.parse(a.remindAt) - Date.parse(b.remindAt));
+    $('nMail').hidden = !active.length; $('nMail').textContent = active.length;
+    const group = (title, list) => list.length ? `<h3>${title} · ${list.length}</h3>${list.map(mailCard).join('')}` : '';
+    let html = group('🔧 В работе', work) + group('🆕 Новые', fresh);
+    if (!active.length) html += `<div class="empty"><span class="big">✅</span>Активных задач нет.<br>Поставь ⭐ на письмо в Gmail или повесь ярлык «Задачи» — через пару минут оно появится здесь.</div>`;
+    if (later.length) html += `<details class="fold" ${mailUi.remind || later.some(x => x.id === mailUi.del) ? 'open' : ''}><summary><h3>⏰ Отложено · ${later.length}</h3></summary>${later.map(mailCard).join('')}</details>`;
+    if (done.length) html += `<details class="fold"><summary><h3>✅ Готово · последние ${done.length}</h3></summary><div class="list">${done.map(d => `<div class="li"><div class="row-between"><span class="muted">${esc(d.subject)}</span><button class="mini" data-m="status" data-s="new" data-id="${esc(d.id)}">↩ Вернуть</button></div><div class="sub">${esc(fmtTime(d.date))}</div></div>`).join('')}</div></details>`;
+    $('ml').innerHTML = html;
+  }
+
+  // Применить ответ сервера к локальному списку, без перезагрузки всей почты
+  function mailApply(id, patch) {
+    if (patch === null) { mail.items = mail.items.filter(x => x.id !== id); return; }
+    const it = mail.items.find(x => x.id === id);
+    if (patch.status === 'done') {
+      mail.items = mail.items.filter(x => x.id !== id);
+      mail.done = [{ id, subject: it?.subject || mail.done.find(d => d.id === id)?.subject || '', date: new Date().toISOString() }, ...(mail.done || []).filter(d => d.id !== id)].slice(0, 15);
+      return;
+    }
+    if (it) Object.assign(it, patch);
+    else if (patch.id) { mail.items.unshift(patch); mail.done = (mail.done || []).filter(d => d.id !== id); }
+  }
+
+  async function remindTask(id, minutes, btn) {
+    if (!(minutes >= 1 && minutes <= 129600)) { toast('Можно от 1 минуты до 90 дней'); return; }
+    if (btn) btn.disabled = true;
+    try {
+      const r = await api('/api/mail', { action: 'remind', id, minutes });
+      mailApply(id, { remindAt: r.remindAt }); mailUi.remind = null;
+      haptic('success'); toast('Напомню ' + fmtTime(r.remindAt) + ' в Telegram'); renderMail();
+    } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); if (btn) btn.disabled = false; }
+  }
+
+  $('ml').addEventListener('click', async e => {
+    const b = e.target.closest('[data-m]'); if (!b) return;
+    const m = b.dataset.m, id = b.dataset.id;
+    if (m === 'cancel') { mailUi.remind = mailUi.del = null; renderMail(); return; }
+    if (m === 'open-remind') { mailUi.remind = id; mailUi.del = null; renderMail(); return; }
+    if (m === 'open-del') { mailUi.del = id; mailUi.remind = null; renderMail(); return; }
+    if (m === 'remind') return remindTask(id, b.dataset.v === 'tmr' ? toTomorrow9() : Number(b.dataset.v), b);
+    if (m === 'remind-custom') {
+      const n = Math.round(Number($('rmN').value)), u = $('rmU').value;
+      mailUi.custom = { n, u };
+      return remindTask(id, n * (UNIT[u] || 60), b);
+    }
+    b.disabled = true;
+    try {
+      if (m === 'status') {
+        const r = await api('/api/mail', { action: 'status', id, status: b.dataset.s });
+        mailApply(id, r.item || { status: b.dataset.s });
+        toast({ done: 'Готово ✓ — ярлык «Задачи/Готово»', work: 'Взял в работу', new: 'Вернул в новые' }[b.dataset.s]);
+      } else if (m === 'delete') {
+        await api('/api/mail', { action: 'delete', id });
+        mailApply(id, null); mailUi.del = null; toast('Убрано из задач');
+      } else if (m === 'unremind') {
+        await api('/api/mail', { action: 'unremind', id });
+        mailApply(id, { remindAt: null }); toast('Напоминание отменено');
+      }
+      haptic('success'); renderMail();
+    } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); b.disabled = false; }
+  });
+
+  // ---------- Аналитика и план ----------
+  let insights = null, insightsLoading = false;
+  const n = v => (v == null ? '—' : Number(v).toLocaleString('ru-RU'));
+  const signed = v => (v == null ? '—' : (v > 0 ? '+' : '') + Number(v).toLocaleString('ru-RU'));
+  const stat = (v, l, cls = '') => `<div class="stat"><div class="v ${cls}">${esc(v)}</div><div class="l">${esc(l)}</div></div>`;
+  const bar = (have, need) => `<div class="bar"><span style="width:${Math.min(100, Math.round((have / Math.max(1, need)) * 100))}%"></span></div>`;
+  const TYPE = { IMAGE: 'Фото', VIDEO: 'Видео', CAROUSEL_ALBUM: 'Карусель', REELS: 'Reels' };
+
+  async function loadInsights() {
+    insightsLoading = true;
+    try { insights = await api('/api/insights', {}); renderInsights(); renderBrain(); }
+    catch (err) { const msg = `<div class="empty">${esc(err.error || 'Не удалось загрузить')}</div>`; $('an').innerHTML = msg; $('pl').innerHTML = msg; }
+    finally { insightsLoading = false; }
+  }
+
+  function spark(series) {
+    const pts = series.filter(d => d.followers != null);
+    if (pts.length < 2) return `<div class="chart-empty">График появится, когда наберётся хотя бы 2 дня статистики (сейчас ${pts.length}).</div>`;
+    const W = 340, H = 110, P = 6;
+    const min = Math.min(...pts.map(p => p.followers)), max = Math.max(...pts.map(p => p.followers));
+    const x = i => P + (i * (W - 2 * P)) / (pts.length - 1);
+    const y = v => H - P - ((v - min) / Math.max(1, max - min)) * (H - 2 * P);
+    const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.followers).toFixed(1)}`).join(' ');
+    const area = `${line} L${x(pts.length - 1).toFixed(1)},${H - P} L${x(0).toFixed(1)},${H - P} Z`;
+    return `<svg viewBox="0 0 ${W} ${H}" class="spark" role="img" aria-label="Подписчики по дням">
+      <path d="${area}" class="spark-area"/><path d="${line}" class="spark-line"/>
+      <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(pts.at(-1).followers).toFixed(1)}" r="3.5" class="spark-dot"/></svg>
+      <div class="axis"><span>${esc(pts[0].date.slice(5).split('-').reverse().join('.'))}</span><span>${esc(n(min))}–${esc(n(max))}</span><span>${esc(pts.at(-1).date.slice(5).split('-').reverse().join('.'))}</span></div>`;
+  }
+
+  // Лаборатория: что набирает просмотры (индекс 1.0 = медиана аккаунта)
+  function labHtml(lab, strategy, learning) {
+    const L = learning || {};
+    const learn = `<div class="stats">${stat(L.text_first_ok == null ? '—' : L.text_first_ok + '%', 'текстов без правок')}${stat(L.final_first_ok == null ? '—' : L.final_first_ok + '%', 'финалов без правок')}</div>
+      <p class="note">ИИ выучил правил из твоих правок: ${esc(L.rules || 0)}. Посмотреть — /rules в боте.</p>`;
+    if (!lab || !lab.posts_measured) return `<h3>Лаборатория</h3><div class="card muted">Пока нет опубликованных постов с замерами. После первых публикаций здесь появится, какие жанры, форматы, свежесть и хуки набирают больше просмотров. Замеры — через 24 ч, 72 ч и 7 дней.</div>${learn}`;
+    const VERD = { 'лидер': 'up', 'аутсайдер': 'down' };
+    const dims = Object.entries(lab.segments || {}).filter(([, list]) => list.length).map(([d, list]) => `
+      <details class="li" ${d === 'format' || d === 'genre' ? 'open' : ''}><summary class="row-between"><b>${esc(lab.dimensions?.[d] || d)}</b><span class="sub">${list.length}</span></summary>
+      ${list.slice(0, 8).map(x => `<div class="labrow"><span>${esc(x.value)}</span><span class="bar mini-bar"><span style="width:${Math.min(100, Math.round((x.index || 0) * 50))}%"></span></span>
+        <span class="v ${VERD[x.verdict] || ''}">${x.index == null ? '—' : esc(x.index)}</span><span class="sub">n=${esc(x.n)}${x.verdict === 'мало данных' ? ' · мало' : ''}</span></div>`).join('')}</details>`).join('');
+    const strat = strategy ? `<div class="card"><b>Выводы ИИ</b><div class="sub" style="margin-top:6px">${esc(strategy.summary || '')}</div>
+      ${strategy.do_more?.length ? `<div class="sub" style="margin-top:8px">📈 Больше: ${strategy.do_more.map(esc).join(' · ')}</div>` : ''}
+      ${strategy.do_less?.length ? `<div class="sub">📉 Меньше: ${strategy.do_less.map(esc).join(' · ')}</div>` : ''}
+      ${strategy.next_tests?.length ? `<div class="sub">🧪 Проверить: ${strategy.next_tests.map(esc).join(' · ')}</div>` : ''}</div>` : '';
+    const top = (lab.top_posts || []).length ? `<div class="list">${lab.top_posts.map(p => `<div class="li">${p.permalink ? `<a href="${esc(p.permalink)}" data-ext>${esc(p.title || p.id)}</a>` : esc(p.title || p.id)}
+      <div class="sub">индекс ${esc(p.index)}${p.views != null ? ' · 👁 ' + n(p.views) : ''}${p.saved != null ? ' · 🔖 ' + n(p.saved) : ''}${p.shares != null ? ' · ↗ ' + n(p.shares) : ''}</div></div>`).join('')}</div>` : '';
+    return `<h3>Лаборатория</h3>
+      <p class="note">Индекс 1.0 — медиана аккаунта; >1.2 лидер, <0.8 аутсайдер. Вердикт — от ${esc(lab.min_posts_for_verdict || 3)} постов. Замер: ${lab.checkpoint === 'h72' ? '72 ч' : '24 ч'}, постов: ${esc(lab.posts_measured)}${lab.metric_source === 'basic' ? ' (по лайкам/комментариям)' : ''}.</p>
+      ${strat}<div class="list">${dims}</div>${top ? '<h3>Лучшие посты</h3>' + top : ''}${learn}`;
+  }
+
+  function renderInsights() {
+    const a = insights.analytics, p = insights.plan;
+    if (a.account?.username) { igName = '@' + a.account.username; if (currentSection === 'ig') $('sub').textContent = igName; }
+    const types = Object.entries(a.posts.by_type).map(([k, v]) => `${TYPE[k] || k}: ${v}`).join(' · ');
+    $('an').innerHTML = !a.account ? '<div class="empty"><span class="big">📊</span>Снимков статистики пока нет.</div>' : `
+      <div class="stats">
+        ${stat(n(a.account.followers), 'подписчиков')}${stat(n(a.account.media_count), 'публикаций')}
+        ${stat(signed(a.growth.d7), 'за 7 дней', a.growth.d7 > 0 ? 'up' : a.growth.d7 < 0 ? 'down' : '')}
+        ${stat(signed(a.growth.d30), 'за 30 дней', a.growth.d30 > 0 ? 'up' : a.growth.d30 < 0 ? 'down' : '')}
+      </div>
+      <h3>Подписчики</h3><div class="card">${spark(a.series)}</div>
+      <h3>Публикации</h3>
+      <div class="stats">
+        ${stat(n(a.posts.avg_likes), 'лайков в среднем')}${stat(n(a.posts.avg_comments), 'комментариев в среднем')}
+        ${stat(a.posts.avg_er == null ? '—' : a.posts.avg_er + '%', 'вовлечённость')}${stat(n(a.posts.last_7d), 'постов за 7 дней')}
+      </div>
+      ${types ? `<p class="note">${esc(types)}</p>` : ''}
+      ${a.posts.top.length ? `<h3>Лучшие</h3><div class="list">${a.posts.top.map(m => `<div class="li">${m.permalink ? `<a href="${esc(m.permalink)}" data-ext>${esc(m.caption || 'Без подписи')}</a>` : esc(m.caption || 'Без подписи')}
+        <div class="sub">♥ ${n(m.likes)} · 💬 ${n(m.comments)}${m.er != null ? ' · ' + m.er + '%' : ''} · ${esc(fmtTime(m.timestamp))}</div></div>`).join('')}</div>` : '<div class="card muted">Публикаций пока нет — цифры появятся после первых постов.</div>'}
+      <h3>Insights</h3>
+      <div class="stats">${stat('—', 'охват')}${stat('—', 'просмотры')}${stat('—', 'сохранения')}${stat('—', 'пересылки')}</div>
+      <p class="note">${a.insights.available ? '' : 'Охват, просмотры, сохранения и пересылки недоступны, пока не выдано разрешение Instagram Insights. Это «нет данных», а не ноль.'}</p>
+      <h3>Решения в пульте</h3>
+      <div class="stats">
+        ${stat(n(a.review.posts_reviewed), 'постов проверено')}${stat(a.review.posts_approval_rate == null ? '—' : a.review.posts_approval_rate + '%', 'постов одобрено')}
+        ${stat(n(a.review.comments_reviewed), 'ответов проверено')}${stat(n(a.review.edits), 'правок текста')}
+      </div>
+      <p class="note">Снимок ${esc(fmtTime(a.account.captured_at_utc))} · дней истории: ${esc(a.growth.days)}</p>
+      ${labHtml(insights.lab, insights.strategy, insights.learning)}`;
+
+    if (!p) { $('pl').innerHTML = '<div class="empty">Файл плана content/growth-plan.json не найден в IGM.</div>'; return; }
+    const ST = { done: ['✓', 'done', 'готово'], in_progress: ['●', 'cur', 'в работе'], todo: ['○', '', 'впереди'], locked: ['🔒', 'lock', 'закрыто'] };
+    const NEWTAG = '<span class="autotag" style="background:rgba(60,190,110,.2);color:#3cbe6e">NEW</span>';
+    const WHO = { owner: ['ты', 'background:rgba(242,170,76,.18);color:#f2aa4c'], claude: ['🤖', 'background:rgba(150,120,255,.18);color:#b9a4ff;font-size:12px'], auto: ['авто', ''] };
+    const taskLi = (s, t) => `<li class="${t.done ? 'ok' : ''} ${t.auto || s.status === 'locked' ? 'auto' : 'tap'}" data-stage="${esc(s.id)}" data-task="${t.i}" data-done="${t.done ? 1 : 0}" ${t.auto ? `data-auto="${esc(t.auto_label || '')}"` : ''}>${t.done ? '✓' : '○'} ${esc(t.title)}${t.progress && !t.done ? ` <span class="muted">${esc(t.progress.have)} / ${esc(t.progress.need)}</span>` : ''} <span class="autotag" style="${(WHO[t.who] || WHO.auto)[1]}">${(WHO[t.who] || WHO.auto)[0]}</span>${t.is_new && !t.done ? ' ' + NEWTAG : ''}</li>`;
+    const mini = (v, l) => `<div style="text-align:center;padding:8px 2px;border-radius:10px;background:rgba(255,255,255,.04)"><div style="font-size:18px;font-weight:700">${esc(v)}</div><div class="muted" style="font-size:11px;line-height:1.2">${esc(l)}</div></div>`;
+    const grid = items => `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px">${items.join('')}</div>`;
+    const planStatsHtml = st => !st ? '' : `<details class="card" style="margin:10px 0"><summary><b>📊 Статистика</b> <span class="muted">· опубликовано ${n(st.published)}</span></summary>
+      ${grid([mini(n(st.published), 'опубликовано'), mini(n(st.posts), 'постов'), mini(n(st.carousels), 'каруселей'), mini(n(st.reels), 'Reels')])}
+      ${grid([mini(n(st.week), 'за 7 дней'), mini(n(st.slides), 'слайдов'), mini(n(st.waiting), 'ждут'), mini(n(st.building), 'в сборке')])}
+      ${grid([mini(n(st.rejected), 'отклонено'), mini(n(st.deleted), 'удалено'), mini(n(st.archived), 'в архиве'), mini(n(st.created), 'создано')])}
+      <div class="sub" style="margin-top:8px">Кто сделал опубликованные: ${Object.entries(st.by_source).map(([k, v]) => `${esc(k)} ${esc(v)}`).join(' · ') || '—'}</div>
+      <div class="sub">С кадрами из TMDB: ${n(st.with_db_images)} · подписчиков: ${st.followers == null ? '—' : n(st.followers)}${st.failed ? ` · ошибок сборки: ${n(st.failed)}` : ''}</div></details>`;
+    const e = p.experiment;
+    $('pl').innerHTML = `
+      ${p.goal ? `<div class="card goal">🎯 ${esc(p.goal)}</div>` : ''}
+      ${planStatsHtml(p.stats)}
+      <h3>Этапы</h3>
+      <div class="list stages">${p.stages.map((s, i) => ({ s, i })).filter(({ s }) => s.status !== 'done').map(({ s, i }) => {
+        const [ic, cls, lbl] = ST[s.status] || ST.todo;
+        const done = s.tasks.filter(t => t.done).length, open = s.tasks.filter(t => !t.done);
+        const fresh = open.some(t => t.is_new);
+        return `<details class="li stage ${cls}" ${s.status === 'in_progress' ? 'open' : ''}>
+          <summary><span class="sic">${ic}</span><span class="stt">${i + 1}. ${esc(s.title)}${fresh ? ' ' + NEWTAG : ''}</span><span class="sst">${s.tasks.length ? done + '/' + s.tasks.length : esc(lbl)}</span></summary>
+          ${s.summary ? `<div class="sub">${esc(s.summary)}</div>` : ''}
+          ${open.length ? `<ul class="tasks">${open.map(t => taskLi(s, t)).join('')}</ul>` : ''}
+          ${done ? `<div class="sub" style="margin-top:6px">✓ выполнено: ${done}, смотри ниже в «Выполнено»</div>` : ''}
+        </details>`;
+      }).join('')}</div>
+      ${(() => {
+        const doneStages = p.stages.map((s, i) => ({ s, i })).filter(({ s }) => s.tasks.some(t => t.done) || s.status === 'done');
+        const total = p.stages.reduce((n, s) => n + s.tasks.filter(t => t.done).length, 0);
+        return total ? `<details class="card" style="margin-top:10px"><summary><b>✅ Выполнено · ${total}</b></summary>
+          ${doneStages.map(({ s, i }) => `<div style="margin-top:10px"><b>${i + 1}. ${esc(s.title)}</b>${s.status === 'done' ? ' <span class="muted">· этап завершён</span>' : ''}
+            <ul class="tasks">${s.tasks.filter(t => t.done).map(t => taskLi(s, t)).join('')}</ul></div>`).join('')}</details>` : '';
+      })()}
+      ${e ? `<h3>${esc(e.title)}</h3>
+      <div class="card">
+        <div class="row-between"><b>${n(e.progress ?? 0)} / ${n(e.total.posts)}</b><span class="muted">${e.start_date ? 'старт ' + esc(e.start_date) : 'не начат'}</span></div>
+        ${bar(e.progress ?? 0, e.total.posts)}
+        <div class="sub">${esc(e.total.cinema)} о кино · ${esc(e.total.series)} о сериалах · ${esc(e.total.reels)} Reels + ${esc(e.total.carousels)} каруселей · слоты ${esc(e.slots_almaty.join(' и '))}</div>
+        ${!e.start_date && e.start_note ? `<div class="sub">${esc(e.start_note)}</div>` : ''}
+      </div>
+      <div class="list">${e.weeks.map(w => `<div class="li"><b>Неделя ${esc(w.n)}</b> · ${esc(w.goal)}
+        <div class="sub">${esc(w.reels)} Reels + ${esc(w.carousels)} карусели · кино ${esc(w.cinema)}, сериалы ${esc(w.series)}</div></div>`).join('')}</div>
+      <h3>Что сравниваем</h3><div class="card"><ul class="tasks">${e.kpis.map(k => `<li>${esc(k)}</li>`).join('')}</ul><div class="sub">${esc(e.rule || '')}</div></div>` : ''}
+      <h3>До автономности</h3>
+      <div class="card">
+        <div class="row-between"><span>Проверенные публикации</span><b>${n(p.gates.posts.have)} / ${n(p.gates.posts.need)}</b></div>${bar(p.gates.posts.have, p.gates.posts.need)}
+        <div class="row-between" style="margin-top:10px"><span>Проверенные ответы</span><b>${n(p.gates.comments.have)} / ${n(p.gates.comments.need)}</b></div>${bar(p.gates.comments.have, p.gates.comments.need)}
+        <div class="sub">Автономность включается только отдельным решением владельца.</div>
+      </div>
+      ${p.ideas.length ? `<h3>Бэклог идей</h3><details class="card"><summary>${esc(p.ideas.length)} идей · ${esc(p.ideas_note)}</summary>
+        <div class="list flat">${p.ideas.map(i => `<div class="li"><span class="tag">${esc(i.format)}</span> ${esc(i.title)}${i.hook ? `<div class="sub">${esc(i.hook)}</div>` : ''}</div>`).join('')}</div></details>` : ''}`;
+  }
+
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[data-ext]'); if (!a) return;
+    e.preventDefault(); tg?.openLink ? tg.openLink(a.href) : window.open(a.href, '_blank');
+  });
+
+  if (!initData) gate({ error: 'Instagram Manager открывается кнопкой в Telegram-боте.' });
+  else load();
+})();
+</script>
+</body>
+</html>

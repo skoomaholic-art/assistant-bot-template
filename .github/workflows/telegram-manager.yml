@@ -1,0 +1,78 @@
+name: MyBrand Telegram Manager
+
+on:
+  push:
+    paths:
+      - 'src/assistant_bot/**'
+      - 'tests/**'
+      - 'tests_js/**'
+      - 'api/**'
+      - '.github/workflows/telegram-manager.yml'
+  workflow_dispatch:
+  issues:
+    types: [opened]
+  schedule:
+    # Temporary free polling, about every 30 minutes. GitHub can delay runs.
+    - cron: '7,37 * * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: mybrand-telegram-poll
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Security and approval tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Mini App API tests
+        run: npm test
+
+  telegram:
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, '[TG]')) }}
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Poll owner-only Telegram inbox
+        env:
+          PYTHONPATH: src
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_OWNER_CHAT_ID: ${{ secrets.TG_OWNER_CHAT_ID }}
+          IGM_BRIDGE_TOKEN: ${{ secrets.IGM_BRIDGE_TOKEN }}
+          IGM_REPOSITORY: ${{ vars.IGM_REPOSITORY }}
+          WEBAPP_URL: ${{ vars.WEBAPP_URL || 'https://your-app.vercel.app' }}
+        run: |
+          if [ -z "$TG_BOT_TOKEN" ]; then
+            echo 'Telegram not configured: TG_BOT_TOKEN missing in Personal Assistant secrets.'
+            exit 0
+          fi
+          python -m assistant_bot.telegram_control | tee telegram-result.txt
+      - name: Report poll result to owner issue
+        if: ${{ github.event_name == 'issues' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          if [ -f telegram-result.txt ]; then
+            gh issue comment "$ISSUE_NUMBER" --body-file telegram-result.txt
+          fi

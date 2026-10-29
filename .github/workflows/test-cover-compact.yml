@@ -1,0 +1,28 @@
+name: Cover Studio compact UI browser regression
+on:
+  push:
+    branches:
+      - ui/cover-studio-compact-accordion-20261028
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run existing JS regression suite
+        run: npm test
+      - name: Install headless Chromium
+        run: |
+          python -m pip install playwright==1.48.0
+          python -m playwright install --with-deps chromium
+      - name: Verify accordion, keyboard, mobile, canvas and render mode
+        run: python tests/ui_compact_smoke.py
