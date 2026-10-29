@@ -4,7 +4,7 @@ An AI assistant for running an Instagram account about movies and TV, controlled
 
 - The AI writes posts, carousels and Reels from fresh film/TV news (or your own topics)
 - You approve the **text** and then the **final** right in Telegram — nothing is published without both approvals
-- A cover designer (Cover Studio) with still/poster search (TMDB), AI image prompts, your own photos and videos
+- A cover designer (Cover Studio) with AI image prompts, your own photos and videos
 - Live Reels: background motion, 2.5D depth, animated text, transitions and music
 - Analytics, a "Viral Lab" that compares formats/genres, and an AI editor that learns from your edits
 
@@ -15,7 +15,7 @@ This repository is **one of two halves**:
 | **assistant-bot-template** (this one) | Telegram bot, Mini App, Cover Studio, AI drafts | Vercel (free Hobby plan) |
 | [insta-engine-template](https://github.com/skoomaholic-art/insta-engine-template) | Data store + the "robot" that renders images/video and publishes | GitHub Actions |
 
-Everything runs on free tiers: Vercel Hobby, GitHub, Groq (AI), TMDB, the official Instagram API. No coding required, just copy/paste.
+Everything runs on free tiers: Vercel Hobby, GitHub, Groq (AI), the official Instagram API. No coding required, just copy/paste.
 
 > A step-by-step illustrated guide in Russian is in [`guide/setup-guide.pdf`](guide/setup-guide.pdf).
 
@@ -80,8 +80,6 @@ Keep your copies private: they will contain your posts and statistics.
 | `CRON_SECRET` | password from step 4 | yes |
 | `GROQ_API_KEY` | [console.groq.com/keys](https://console.groq.com/keys) (`gsk_…`) | yes (AI) |
 | `WEBAPP_HOST` | your domain without `https://`, e.g. `assistant-bot-xyz.vercel.app` | recommended |
-| `TMDB_API_KEY` | [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api) (API key or Read Access Token) | for still search |
-| `FANART_API_KEY` | [fanart.tv](https://fanart.tv/get-an-api-key/) personal key | optional |
 | `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | optional (fact-check) |
 
 3. **Deployments → ⋯ → Redeploy** — Vercel applies variables only to a new build.
@@ -125,7 +123,6 @@ In the templates the brand is `MyBrand`. Open your repo on GitHub and press `.` 
 | Final never arrives (10+ min) | The robot failed | `insta-engine` → Actions → *Post Pipeline* → open the red run |
 | You sent a picture and the bot made a separate post | It wasn't sent as a *reply* | Reply (swipe left) to the post's card, or use the "This is the cover for…" button |
 | "AI returned too few slides" | The free model stumbled | Press **🔁 Another version** |
-| Still search: "TMDB_API_KEY is not set" | No key | Add `TMDB_API_KEY`, Redeploy |
 | No "Add to Home Screen" | Main Mini App not enabled | BotFather → Configure Mini App → Enable |
 
 ---
@@ -138,7 +135,6 @@ In the templates the brand is `MyBrand`. Open your repo on GitHub and press `.` 
 
 ## Notes
 - Vercel Hobby allows 12 serverless functions; this project uses exactly 12 (`api/*.js` without a leading underscore). Add features to existing endpoints.
-- Movie stills belong to their rights holders. The bot applies them only after you confirm, and adds "© rights holders" to the caption.
 - Reels music: Kevin MacLeod (incompetech.com), CC BY 4.0 — credited in the caption automatically.
 
 ## License
