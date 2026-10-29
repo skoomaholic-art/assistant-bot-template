@@ -35,6 +35,22 @@ const COMMANDS = [
   ['status', 'Instagram: состояние очереди'],
 ];
 
+// Посторонние видят в меню только это; полный список команд — только в чате владельца
+const GUEST_COMMANDS = [
+  ['start', 'Что это за бот'],
+  ['guide', 'Гайд по установке (PDF)'],
+];
+
+// Меню команд: по умолчанию (для всех) — гостевое, в чате владельца — полное
+export async function syncCommands(owner, call = tg) {
+  const list = arr => arr.map(([command, description]) => ({ command, description }));
+  const guest = await call('setMyCommands', { commands: list(GUEST_COMMANDS) });
+  let mine = { ok: false, description: 'TG_OWNER_CHAT_ID не задан' };
+  if (/^\d+$/.test(String(owner || ''))) mine = await call('setMyCommands', { commands: list(COMMANDS), scope: { type: 'chat', chat_id: Number(owner) } });
+  return { ok: Boolean(guest.ok && mine.ok), description: guest.ok ? mine.description : guest.description };
+}
+let commandsSynced = false;
+
 const secret = () => String(process.env.TG_WEBHOOK_SECRET || '').trim();
 export function sameSecret(a, b) {
   const x = Buffer.from(String(a || '')), y = Buffer.from(String(b || ''));
@@ -506,7 +522,7 @@ export async function handleUpdate(update, { owner, host, deps }) {
 async function install(host) {
   const url = `${appUrl(host)}/api/bot`;
   const hook = await tg('setWebhook', { url, secret_token: secret(), allowed_updates: ['message', 'callback_query'], drop_pending_updates: false });
-  const cmds = await tg('setMyCommands', { commands: COMMANDS.map(([command, description]) => ({ command, description })) });
+  const cmds = await syncCommands(ownerId());
   let menu = { ok: false, description: 'TG_OWNER_CHAT_ID не задан' };
   if (/^\d+$/.test(ownerId())) {
     menu = await tg('setChatMenuButton', { chat_id: Number(ownerId()), menu_button: { type: 'web_app', text: 'Instagram Manager', web_app: { url: appUrl(host) } } });
@@ -562,6 +578,8 @@ export default async function handler(req, res) {
     const owner = ownerId();
     const guest = guestReply(update, owner, host);
     if (guest) { for (const g of guest) await tg(g.method, g.body); return text(res, 200, 'ok'); }
+    // Один раз на запуск сервера обновляем меню команд: посторонним — только /start и /guide
+    if (!commandsSynced) { commandsSynced = true; syncCommands(owner).catch(() => { commandsSynced = false; }); }
     const notify = t => tg('sendMessage', { chat_id: Number(owner), text: t });
     const actions = await handleUpdate(update, { owner, host, deps: { get: ghGetJson, put: ghPutJson, notify } });
     const chatId = Number(owner);
