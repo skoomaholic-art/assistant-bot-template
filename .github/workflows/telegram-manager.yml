@@ -25,6 +25,7 @@ concurrency:
 
 jobs:
   test:
+    if: ${{ !endsWith(github.repository, '-template') }}  # в самом шаблоне не запускается, только в твоей копии
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -43,7 +44,7 @@ jobs:
         run: npm test
 
   telegram:
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, '[TG]')) }}
+    if: ${{ !endsWith(github.repository, '-template') && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, '[TG]'))) }}
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 4
