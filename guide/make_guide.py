@@ -14,10 +14,11 @@ pdfmetrics.registerFont(TTFont("Sans", F + "DejaVuSans.ttf"))
 pdfmetrics.registerFont(TTFont("Sans-Bold", F + "DejaVuSans-Bold.ttf"))
 pdfmetrics.registerFont(TTFont("Sans-It", F + "DejaVuSans-Oblique.ttf"))
 pdfmetrics.registerFont(TTFont("Mono", F + "DejaVuSansMono.ttf"))
+pdfmetrics.registerFont(TTFont("Mono-Bold", F + "DejaVuSansMono-Bold.ttf"))
 from reportlab.pdfbase.pdfmetrics import registerFontFamily
 registerFontFamily("Sans", normal="Sans", bold="Sans-Bold", italic="Sans-It", boldItalic="Sans-Bold")
 
-ORG = "skoomaholic-art"
+ORG = "YOUR_GITHUB_LOGIN"
 BOT_TPL = f"https://github.com/{ORG}/assistant-bot-template"
 ENG_TPL = f"https://github.com/{ORG}/insta-engine-template"
 
@@ -80,11 +81,12 @@ def footer(c, doc):
 def build(out):
     s = []
     s += [Spacer(1, 30 * mm), P("Instagram Manager: свой ИИ-помощник для Instagram", "title"),
-          P("Пошаговая установка: Telegram-бот, мини-приложение, конструктор обложек, ИИ-редактор, автопубликация и аналитика. Бесплатно, без программирования", "sub")]
+          P("Пошаговая установка: Telegram-бот, мини-приложение, конструктор обложек, ИИ-редактор, автопубликация и аналитика. Бесплатно, без программирования", "sub"),
+          P("Автор: <b>mybrand</b>", "sub")]
     s.append(box("Что получится в конце", [
         "• Telegram-бот, который отвечает только тебе, и мини-приложение <b>Instagram Manager</b> прямо в Telegram",
         "• ИИ пишет посты, карусели и Reels по новостям кино и сериалов, ты согласовываешь текст и финал",
-        "• Конструктор обложек, поиск кадров по фильмам и актёрам, живые Reels с музыкой",
+        "• Конструктор обложек, живые Reels с музыкой",
         "• Робот сам публикует в Instagram (только после двух твоих «ок»), собирает статистику и учится на твоих правках"]))
     s.append(table([["Сколько времени", "Сколько стоит", "Что нужно уметь"],
                     ["1,5–2 часа в первый раз", "0 ₸: всё на бесплатных тарифах", "Копировать и вставлять. Код писать не нужно"]], [57, 57, 56]))
@@ -110,11 +112,11 @@ def build(out):
         f"Аккаунт Vercel (входи через GitHub): {link('https://vercel.com/signup')}",
         f"Аккаунт Meta for Developers (входи через Facebook): {link('https://developers.facebook.com')}",
         f"Ключ Groq для ИИ: {link('https://console.groq.com/keys')}",
-        f"Необязательно: TMDB (поиск кадров) {link('https://www.themoviedb.org/settings/api')}, fanart.tv {link('https://fanart.tv/get-an-api-key/')}, Gemini (проверка фактов) {link('https://aistudio.google.com/apikey')}"])
+        f"Необязательно: Gemini (проверка фактов) {link('https://aistudio.google.com/apikey')}"])
     s.append(PageBreak())
 
     s += [step(1, "Создай Telegram-бота"), Spacer(1, 6)]
-    s += bullets([f"Открой {link('https://t.me/BotFather', '@BotFather')} и отправь <b>/newbot</b>",
+    s += bullets([f"Открой {link('https://t.me/BotFather', '@BotFather')} и отправь <font name='Mono-Bold'>/newbot</font>",
                   "Придумай <b>имя</b> (видно в чатах, можно на русском и с пробелами) и <b>username</b>: латиница, без пробелов, в конце обязательно <b>bot</b>, например <i>mycinema_assistant_bot</i>",
                   "BotFather пришлёт <b>токен</b> вида <font name='Mono'>1234567890:AAH…</font>. Это <b>TG_BOT_TOKEN</b>, сохрани его",
                   f"Узнай свой числовой Telegram ID: напиши {link('https://t.me/userinfobot', '@userinfobot')}, он ответит числом. Это <b>TG_OWNER_CHAT_ID</b>: только этот ID сможет управлять ботом"], True)
@@ -168,8 +170,7 @@ def build(out):
                     ["IGM_REPOSITORY", "твой-логин/insta-engine", "да"], ["PIPELINE_SECRET", "пароль из шага 4", "да"],
                     ["CRON_SECRET", "пароль из шага 4", "да"], ["GROQ_API_KEY", f"ключ с {link('https://console.groq.com/keys', 'console.groq.com/keys')} (начинается с gsk_)", "да, для ИИ"],
                     ["WEBAPP_HOST", "адрес приложения без https://, например assistant-bot-xxx.vercel.app", "желательно"],
-                    ["TMDB_API_KEY", "API Key или Read Access Token с themoviedb.org", "для поиска кадров"],
-                    ["FANART_API_KEY", "personal API key с fanart.tv", "нет"], ["GEMINI_API_KEY", "ключ Google AI Studio", "для проверки фактов"],
+                    ["GEMINI_API_KEY", "ключ Google AI Studio", "для проверки фактов"],
                     ], [48, 92, 30]))
     s.append(Spacer(1, 6))
     s.append(box("После любого изменения переменных", ["Vercel применяет их только к новой сборке: Deployments → у последней сборки ⋯ → <b>Redeploy</b>"]))
@@ -180,7 +181,7 @@ def build(out):
     s += bullets(["Открой в браузере адрес (подставь свой домен и пароль TG_WEBHOOK_SECRET):"], True)
     s.append(code("https://ТВОЙ-ДОМЕН.vercel.app/api/bot?install=ТВОЙ_TG_WEBHOOK_SECRET"))
     s += bullets(["Должно появиться «Готово»: бот подключён, у него появилась кнопка меню «Instagram Manager»",
-                  "Напиши боту <b>/start</b>. Он ответит и покажет кнопку мини-приложения",
+                  "Напиши боту <font name='Mono-Bold'>/start</font>. Он ответит и покажет кнопку мини-приложения",
                   "Чтобы ставить иконку на экран телефона: @BotFather → /mybots → бот → <b>Bot Settings → Configure Mini App → Enable Mini App</b> → отправь адрес https://ТВОЙ-ДОМЕН.vercel.app. "
                   "Потом открой приложение и в меню ⋯ выбери «Добавить на экран «Домой»»"])
     s.append(box("Если на этом шаге что-то пошло не так", ['Видишь «Неверный ключ установки»? В адресе не тот пароль. Частая ошибка: вставляют токен бота вместо своего TG_WEBHOOK_SECRET', 'Бот молчит на /start? Проверь по очереди: открыт ли адрес установки из этого шага; твой ли ID в TG_OWNER_CHAT_ID (бот отвечает только владельцу); был ли Redeploy после добавления переменных', 'Нет пункта «Добавить на экран «Домой»»? Не включено мини-приложение бота: @BotFather → /mybots → бот → Bot Settings → Configure Mini App → Enable Mini App']))
@@ -212,7 +213,7 @@ def build(out):
     s.append(box("Если на этом шаге что-то пошло не так", ['Красный крестик и «Vercel отклонил подпись»? PIPELINE_SECRET в GitHub и на Vercel отличаются. Вставь одинаковый в оба места, на Vercel сделай Redeploy', 'Видишь «Публикация выключена: IGM_ENABLE_PUBLISH»? Это защита от случайной публикации. Добавь переменную IGM_ENABLE_PUBLISH = true, когда будешь готов', 'Ошибка «ffmpeg is not available» при сборке Reels? На серверах GitHub сменилась система. В шаблоне это уже исправлено: обнови файлы из папки .github/workflows', 'Viral Lab (статистика) с красным крестиком? Почти всегда дело в токене Instagram: истёк или выдан без instagram_business_manage_insights', 'Расписание не запускается? В новом репозитории запусти каждый workflow один раз вручную (Run workflow)']))
 
     s += [step(9, "Проверь, что всё работает"), Spacer(1, 6)]
-    s += bullets(["В боте отправь <b>/status</b>: бот покажет, какие ключи найдены, и что не так",
+    s += bullets(["В боте отправь <font name='Mono-Bold'>/status</font>: бот покажет, какие ключи найдены, и что не так",
                   "Открой мини-приложение → <b>Новости</b> → у любой новости нажми <b>«Пост»</b>: ИИ посоветует формат и пришлёт текст в бот",
                   "Нажми <b>«Текст ок»</b>: через 2–3 минуты придёт финал с картинками",
                   "Для первого раза нажми <b>«Опубликую сам»</b>: робот пришлёт файлы, ничего не публикуя. Если всё нравится, в следующий раз жми «Публиковать»"], True)
@@ -241,7 +242,6 @@ def build(out):
                  ["Ошибка Instagram (#10), (#200)", "Нет разрешения у токена", "Шаг 7: новый токен со всеми разрешениями"],
                  ["Ошибка Instagram 190", "Истёк токен", "Сгенерируй новый, обнови IG_ACCESS_TOKEN"],
                  ["«ffmpeg is not available»", "На сервере GitHub нет видеопрограммы", "Обнови файлы workflows из шаблона: там установка ffmpeg"],
-                 ["Поиск кадров: «нет TMDB_API_KEY»", "Ключ не задан", "Получи ключ на themoviedb.org, добавь на Vercel, Redeploy"],
                  ["Deployment Blocked", "Автор коммита не владелец Vercel", "Коммить из своего GitHub, проверь подключение Vercel к GitHub"]], [52, 52, 66]),
           Spacer(1, 6), P("Безопасность", "h2")]
     s += bullets(["Бот отвечает только твоему Telegram ID. Посторонние видят лишь приветствие и этот гайд",
@@ -250,11 +250,11 @@ def build(out):
                   "Включи двухэтапную проверку в Telegram, двухфакторную защиту в GitHub, Vercel и Meta",
                   "Репозитории держи приватными: в них твои посты и статистика"])
     s += [P("Сколько это стоит", "h2"),
-          P("Vercel Hobby, GitHub (около 2000 минут работы робота в месяц для приватных репозиториев), Groq, TMDB, Meta API: бесплатно. "
-            "При 3 постах в день и паре Reels робот тратит примерно 300–600 минут в месяц. Музыка для Reels: треки Kevin MacLeod (CC BY 4.0), автор указывается в подписи автоматически. "
-            "Кадры из фильмов принадлежат правообладателям: робот ставит их только после твоего подтверждения")]
+          P("Vercel Hobby, GitHub (около 2000 минут работы робота в месяц для приватных репозиториев), Groq, Meta API: бесплатно. "
+            "При 3 постах в день и паре Reels робот тратит примерно 300–600 минут в месяц. Музыка для Reels: треки Kevin MacLeod (CC BY 4.0), автор указывается в подписи автоматически."
+            )]
     doc = SimpleDocTemplate(out, pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm, topMargin=15 * mm, bottomMargin=17 * mm,
-                            title="Instagram Manager: гайд по установке", author="")
+                            title="Instagram Manager: гайд по установке", author="mybrand", creator="mybrand")
     doc.build(s, onFirstPage=footer, onLaterPages=footer)
 
 

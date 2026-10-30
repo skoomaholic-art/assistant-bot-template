@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import { botToken, ghPutBinary, ReviewError, utcNow } from './_lib.js';
 import { act, cleanTags, createPost, findPost, generateDraft, ownButtons, ownCard, POST_ID, presetFor, tgCall, withPipe } from './_pipeline.js';
+import { capHashtags } from './_hashtags.js';
 
 const MAX_BYTES = 20 * 1024 * 1024; // предел скачивания файлов Bot API
 
@@ -36,20 +37,21 @@ export async function addOwnMedia(message, owner, deps = {}) {
   const pipe = deps.pipe || withPipe;
   const group = message.media_group_id ? String(message.media_group_id) : null;
   const caption = String(message.caption || '').trim().slice(0, 2200);
-  let created = false;
+  // «создан» берём из результата замыкания: при конфликте записи withPipe выполняет его заново на свежем
+  // состоянии, и второе фото альбома уже найдёт пост, созданный первым (иначе каждое фото было бы «новым»)
   const first = await pipe(st => {
     let post = group ? st.posts.find(p => p.own?.media_group_id === group && p.status === 'text_review') : null;
     if (post) {
       if (media.kind === 'video' || post.draft.format === 'reel') throw new ReviewError('В альбоме для карусели могут быть только фото');
       if ((post.own.files || []).length >= 10) throw new ReviewError('В карусели максимум 10 фото');
-      if (caption && !post.draft.caption) post.draft.caption = caption;
-      return { post, message: caption ? `pipeline: own caption ${post.id}` : undefined };
+      if (caption && !post.draft.caption) post.draft.caption = capHashtags(caption);
+      return { post, created: false, message: caption ? `pipeline: own caption ${post.id}` : undefined };
     }
     post = createPost(st, { draft: { format: media.kind === 'video' ? 'reel' : 'portrait', slides: [{ title: 'Свой пост', subtitle: '' }], caption, tags: {} }, source: { kind: 'own', topic: caption.slice(0, 200) } }, owner);
     post.own = { media_group_id: group, files: [], kind: media.kind };
-    created = true;
-    return { post, message: `pipeline: own post ${post.id}` };
+    return { post, created: true, message: `pipeline: own post ${post.id}` };
   });
+  const created = first.created === true;
   const id = first.post.id;
   const buf = await (deps.download || downloadFile)(media.file_id);
   const path = `media/posts/${id}/src-${String(media.uid).replace(/[^A-Za-z0-9_-]/g, '')}.${media.ext}`;
@@ -71,7 +73,7 @@ export async function setCaption(id, text, owner, deps = {}) {
   return pipe(st => {
     const post = findPost(st, id);
     if (!['text_review', 'final_review', 'failed'].includes(post.status)) throw new ReviewError('Подпись уже не изменить', 409);
-    post.draft.caption = String(text).trim().slice(0, 2200);
+    post.draft.caption = capHashtags(String(text).trim().slice(0, 2200));
     (post.history ||= []).push({ at: utcNow(), event: 'caption_updated', by: String(owner) });
     if (post.source?.kind !== 'own' && post.status === 'text_review') (post.history).push({ at: utcNow(), event: 'text_updated', by: String(owner) });
     return { post, message: `pipeline: caption ${id}` };
@@ -180,25 +182,49 @@ export async function clearBackground(id, slide, owner, deps = {}) {
   });
 }
 
-// «🎬 Взять кадры»: ставим предложенные кадры TMDB на слайды, где ещё нет картинки
+// «🎬 Взять кадры»: ставим предложенные кадры TMDB на слайды, где ещё нет картинки.
+// Статус проверяем один раз, все файлы грузим, потом одна запись в posts.json и одна пересборка
 export async function applySuggestedImages(id, owner, deps = {}) {
   const { pendingSuggestions } = await import('./_pipeline.js');
   const { fetchImage } = await import('./_images.js');
   const pipe = deps.pipe || withPipe;
   const cur = await pipe(st => ({ post: findPost(st, id) }));
-  const list = pendingSuggestions(cur.post);
+  if (cur.post.source?.kind === 'own') throw new ReviewError('Это твой пост с фото: картинка не нужна, просто собери финал');
+  if (!['text_review', 'final_review', 'failed'].includes(cur.post.status)) throw new ReviewError('Пост уже публикуется, картинку не поменять', 409);
+  const n = Math.max(1, (cur.post.draft.slides || []).length);
+  const list = pendingSuggestions(cur.post).filter(x => x.slide >= 1 && x.slide <= n);
   if (!list.length) throw new ReviewError('Кадры уже стоят или их нет');
-  const done = [];
-  let rerender = false;
+  const put = deps.putBinary || ghPutBinary;
+  const ready = [];
   for (const x of list) {
     try {
       const image = await (deps.fetchImage || fetchImage)(x.url);
-      const r = await attachImageBackground(id, x.slide, image, { source: x.source, title: x.title, url: x.url }, owner, deps);
-      done.push(x.slide); rerender = rerender || r.rerender;
-    } catch (err) { if (err instanceof ReviewError && err.code === 409) throw err; }
+      const ext = /png/.test(image.type) ? 'png' : 'jpg';
+      const hash = createHash('sha1').update(image.buf).digest('hex').slice(0, 12);
+      const path = `media/posts/${id}/bg-db-${hash}.${ext}`;
+      await put(path, image.buf, `pipeline: background ${id}`);
+      ready.push({ slide: x.slide, path, source: { source: String(x.source || 'TMDB').slice(0, 30), title: String(x.title || '').slice(0, 120), url: String(x.url || '').slice(0, 300) } });
+    } catch (err) { console.error('suggested image', x.slide, err?.message); }
   }
-  if (!done.length) throw new ReviewError('Не удалось скачать кадры, попробуй позже', 502);
-  return { slides: done, total: list.length, rerender };
+  if (!ready.length) throw new ReviewError('Не удалось скачать кадры, попробуй позже', 502);
+  const r = await pipe(st => {
+    const post = findPost(st, id);
+    if (!['text_review', 'final_review', 'failed'].includes(post.status)) throw new ReviewError('Пост уже публикуется, картинку не поменять', 409);
+    const bgs = { ...(post.bg?.path ? { 0: post.bg.path } : {}), ...(post.bgs || {}) };
+    let sources = post.image_sources || [];
+    for (const x of ready) {
+      bgs[x.slide - 1] = x.path;
+      sources = [...sources.filter(y => y.slide !== x.slide), { slide: x.slide, ...x.source, at: utcNow() }];
+    }
+    post.bgs = bgs;
+    post.bg = bgs[0] ? { path: bgs[0], at: utcNow() } : null;
+    if (sources.length) post.image_sources = sources; else delete post.image_sources;
+    let rerender = false;
+    if (post.status === 'final_review' && post.approvals?.text?.by) { post.status = 'rendering'; post.approvals = { text: post.approvals.text }; rerender = true; }
+    (post.history ||= []).push({ at: utcNow(), event: 'background_added', by: String(owner), note: `кадры на слайды ${ready.map(x => x.slide).join(', ')}` });
+    return { post, rerender, message: `pipeline: suggested images ${id} slides ${ready.map(x => x.slide).join(',')}` };
+  });
+  return { slides: ready.map(x => x.slide), total: list.length, rerender: r.rerender, post: r.post };
 }
 
 // ---------- Музыка для Reels: трек в бот ----------
@@ -217,6 +243,12 @@ export async function addMusic(message, owner, { postId = null, deps = {} } = {}
   const a = extractAudio(message);
   if (!a) throw new ReviewError('Это не аудиофайл');
   if (a.size > MAX_BYTES) throw new ReviewError('Трек больше 20 МБ', 413);
+  if (postId) {
+    // формат и статус проверяем до скачивания (до 20 МБ), чтобы не грузить файл зря
+    const cur = await (deps.pipe || withPipe)(st => ({ post: findPost(st, postId) }));
+    if (cur.post.draft?.format !== 'reel') throw new ReviewError('Музыка ставится только в Reels');
+    if (['published', 'publishing', 'publishing_in_progress'].includes(cur.post.status)) throw new ReviewError('Reels уже публикуется', 409);
+  }
   const buf = await (deps.download || downloadFile)(a.file_id);
   const path = `media/music/own-${String(a.uid).replace(/[^A-Za-z0-9_-]/g, '')}.${a.ext}`;
   await (deps.putBinary || ghPutBinary)(path, buf, 'music: track from owner');

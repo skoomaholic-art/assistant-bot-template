@@ -7,8 +7,11 @@
 // POST { initData, action: 'remind', id, minutes }               → спрятать и напомнить через N минут
 // POST { initData, action: 'unremind', id }                      → отменить напоминание
 // POST { key, action: 'due', items }                             → от Gmail-скрипта: прислать напоминания в Telegram
+// POST { key, action: 'tick' }                                   → от Gmail-скрипта раз в 5 минут: пнуть робота IGM,
+//                                                                  если отложенному посту пора или сборка зависла
 import crypto from 'node:crypto';
 import { authorize, botToken, ownerId, readBody, reply, fail, ReviewError } from './_lib.js';
+import { tickRobot } from './_kick.js';
 
 const env = n => String(process.env[n] || '').trim();
 export const MAIL_ID = /^[0-9a-f]{8,24}$/i;
@@ -54,11 +57,30 @@ export async function callScript(payload, fetchImpl = fetch) {
 const isoOrNull = v => (v && !isNaN(Date.parse(v)) ? new Date(v).toISOString() : null);
 const gmailLink = v => (/^https:\/\/mail\.google\.com\//.test(String(v || '')) ? String(v) : null);
 
+// Пересланные с рабочей почты письма: настоящий отправитель — в строке «Отправитель: …», а в тексте
+// мусор Outlook (предупреждения о внешней почте, ссылки в <…>, cid-картинки). Показываем суть.
+const NOISE = [
+  /Вы не часто получаете электронную почту от[^]*?почему это важно/gi,
+  /EXTERNAL EMAIL:[^]*?know the content is safe\.?/gi,
+  /ВНЕШНЯЯ ПОЧТА:[^]*?содержимое безопасно\.?/gi,
+  /\[cid:[^\]]*\]/gi,
+  /<(?:https?:|mailto:)[^>]*>/gi,
+];
+export function cleanMail(from, snippet) {
+  let text = String(snippet || '');
+  let sender = String(from || '');
+  const m = text.match(/^\s*Отправитель:\s*<?([^\s<>]+@[^\s<>]+)>?/i);
+  if (m) { sender = m[1].toLowerCase().replace(/[.,;:]+$/, ''); text = text.slice(m[0].length); }
+  for (const re of NOISE) text = text.replace(re, ' ');
+  return { from: sender.trim().slice(0, 80), snippet: text.replace(/\s+/g, ' ').trim().slice(0, 280) };
+}
+
 export function cleanItem(x) {
+  const c = cleanMail(x?.from, x?.snippet);
   return {
     id: String(x?.id || ''), status: STATUSES.includes(x?.status) ? x.status : 'new',
-    subject: String(x?.subject || '').slice(0, 200), from: String(x?.from || '').slice(0, 80),
-    date: isoOrNull(x?.date), snippet: String(x?.snippet || '').slice(0, 280), messages: Number(x?.messages) || 1,
+    subject: String(x?.subject || '').slice(0, 200), from: c.from,
+    date: isoOrNull(x?.date), snippet: c.snippet, messages: Number(x?.messages) || 1,
     unread: Boolean(x?.unread), starred: Boolean(x?.starred), remindAt: isoOrNull(x?.remindAt), link: gmailLink(x?.link),
   };
 }
@@ -148,11 +170,19 @@ export async function sendDue(body, fetchImpl = fetch) {
   return sent;
 }
 
+// Пульс от Gmail-скрипта: тот же ключ, что у 'due'. Ответ { ok, kicked, due:[id] }
+export async function sendTick(body, deps = {}) {
+  if (!sameKey(body?.key, env('MAIL_SCRIPT_KEY'))) throw new ReviewError('forbidden', 403);
+  const r = await (deps.tick || tickRobot)(deps);
+  return { kicked: Boolean(r.kicked), due: r.due || [] };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return reply(res, 405, { ok: false, error: 'POST only' });
   try {
     const body = readBody(req);
     if (body.action === 'due') return reply(res, 200, { ok: true, sent: await sendDue(body) });
+    if (body.action === 'tick') return reply(res, 200, { ok: true, ...(await sendTick(body)) });
     authorize(body.initData);
     const action = body.action || 'list';
     if (action === 'list') {

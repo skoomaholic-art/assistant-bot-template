@@ -1,5 +1,6 @@
-// POST от workflow IGM pipeline.yml: { id, event: final_ready|published|failed, ts } + X-Pipeline-Signature.
+// POST от workflow IGM pipeline.yml: { id, event: final_ready|published|failed|alert, ts } + X-Pipeline-Signature.
 // Присылает владельцу финал на согласование, ссылку на опубликованный пост или ошибку.
+// alert: { id:'P0000', event:'alert', ts, text } → владельцу «⚠️ текст» (сбой робота вне конкретного поста)
 import crypto from 'node:crypto';
 import { ghGetJson, ownerId, readBody } from './_lib.js';
 import { runEditor } from './_editor.js';
@@ -8,17 +9,43 @@ import { hookSignature, PIPE_PATH, pipelineSecret, POST_ID, promptMessage, sendF
 
 const out = (res, code, body) => { res.statusCode = code; res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.end(body); };
 
+export const HOOK_EVENTS = ['final_ready', 'published', 'failed', 'ping', 'prompts', 'editor', 'replan', 'alert'];
+export const HOOK_WINDOW_S = 180;
 export function validHook({ id, event, ts }, sig, secret = pipelineSecret(), now = Date.now()) {
-  if (!secret || !POST_ID.test(String(id)) || !['final_ready', 'published', 'failed', 'ping', 'prompts', 'editor', 'replan'].includes(event)) return false;
-  if (!Number.isInteger(ts) || Math.abs(now / 1000 - ts) > 600) return false;
+  if (!secret || !POST_ID.test(String(id)) || !HOOK_EVENTS.includes(event)) return false;
+  if (!Number.isInteger(ts) || Math.abs(now / 1000 - ts) > HOOK_WINDOW_S) return false;
   const a = Buffer.from(hookSignature(id, event, ts, secret)), b = Buffer.from(String(sig || ''));
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// Повтор того же подписанного запроса (id, event, ts) в окне ±180 с отбрасываем: помним недавние
+const seenHooks = new Map();
+export function replayedHook({ id, event, ts }, now = Date.now()) {
+  for (const [k, at] of seenHooks) if (now - at > 2 * HOOK_WINDOW_S * 1000) seenHooks.delete(k); else break;
+  const key = `${id}:${event}:${ts}`;
+  if (seenHooks.has(key)) return true;
+  seenHooks.set(key, now);
+  if (seenHooks.size > 2000) seenHooks.delete(seenHooks.keys().next().value);
+  return false;
+}
+
+// Текст тревоги: строка до 500 знаков без управляющих символов (перевод строки оставляем)
+export function alertText(v) {
+  if (typeof v !== 'string') return '';
+  return v.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, '').trim().slice(0, 500);
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return out(res, 405, 'POST only');
   const body = readBody(req);
   if (!validHook(body, req.headers['x-pipeline-signature'])) return out(res, 401, 'bad signature');
+  if (replayedHook(body)) return out(res, 409, 'replay');
+  if (body.event === 'alert') {
+    const t = alertText(body.text);
+    if (!t) return out(res, 400, 'empty alert');
+    const sent = await tgCall('sendMessage', { chat_id: Number(ownerId()), text: '⚠️ ' + t, disable_web_page_preview: true });
+    return out(res, sent?.ok ? 200 : 502, sent?.ok ? 'ok' : 'telegram error');
+  }
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
   if (body.event === 'ping') {
     // Проверка связки IGM ↔ Vercel: раз подпись верна, PIPELINE_SECRET совпадает. Заодно проверяем остальное.

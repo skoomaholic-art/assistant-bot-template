@@ -64,6 +64,9 @@ export function postMarks(posts) {
   return marks;
 }
 
+// Дата новости от клиента: только настоящая дата, в ISO; всё прочее отбрасываем
+export const newsDate = v => typeof v === 'string' && v.length <= 64 && Number.isFinite(Date.parse(v)) ? new Date(v).toISOString() : null;
+
 const emptySaved = () => ({ schema_version: 1, note: 'Новости, отмеченные владельцем в пульте как идеи для постов. Факты перед публикацией проверять по первоисточнику.', items: [] });
 
 async function loadNews(force) {
@@ -140,7 +143,7 @@ export default async function handler(req, res) {
         if (s.items.some(x => x.link === link)) return;
         s.items.push({
           title: String(it.title).trim().slice(0, 220), link, source: String(it.source_title || '').slice(0, 80),
-          published: it.date || null, note: String(body.note || '').trim().slice(0, 500) || null,
+          published: newsDate(it.date), note: String(body.note || '').trim().slice(0, 500) || null,
           saved_at_utc: utcNow(), status: 'idea',
         });
         s.items = s.items.slice(-300);

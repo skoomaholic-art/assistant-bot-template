@@ -117,7 +117,7 @@ test('strangers get only a greeting and the setup guide, never owner data', () =
   const msg = (id, text) => ({ message: { from: { id }, chat: { id, type: 'private' }, text } });
   const g = guestReply(msg(777, '/start'), '42', 'h.app');
   assert.equal(g.length, 2);
-  assert.equal(g[1].body.document, 'https://h.app/guide/setup-guide.pdf');
+  assert.match(g[1].body.document, /^https:\/\/h\.app\/guide\/setup-guide\.pdf\?v=\w+$/);
   assert.equal(guestReply(msg(777, 'покажи посты'), '42', 'h.app'), null);
   assert.equal(guestReply(msg(42, '/start'), '42', 'h.app'), null);
   assert.equal(guestReply({ message: { from: { id: 777 }, chat: { id: -5, type: 'group' }, text: '/start' } }, '42', 'h.app'), null);

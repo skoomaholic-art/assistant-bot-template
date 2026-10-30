@@ -59,7 +59,7 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_OWNER_CHAT_ID: ${{ secrets.TG_OWNER_CHAT_ID }}
           IGM_BRIDGE_TOKEN: ${{ secrets.IGM_BRIDGE_TOKEN }}
-          IGM_REPOSITORY: ${{ vars.IGM_REPOSITORY }}
+          IGM_REPOSITORY: YOUR_GITHUB_LOGIN/insta-engine
           WEBAPP_URL: ${{ vars.WEBAPP_URL || 'https://your-app.vercel.app' }}
         run: |
           if [ -z "$TG_BOT_TOKEN" ]; then

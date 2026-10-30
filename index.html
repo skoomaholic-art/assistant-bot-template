@@ -38,7 +38,8 @@
   nav button.on { background: var(--bg); color: var(--text); }
   .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px;
     background: var(--accent); color: var(--accent-text); font-size: 11px; line-height: 18px; text-align: center; }
-  .chips { display: flex; gap: 6px; margin: 12px 0 4px; overflow-x: auto; }
+  .chips { display: flex; gap: 6px; margin: 12px 0 6px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: rgba(127,127,127,.35) transparent; }
+  .chips::-webkit-scrollbar { height: 4px; } .chips::-webkit-scrollbar-track { background: transparent; } .chips::-webkit-scrollbar-thumb { background: rgba(127,127,127,.35); border-radius: 4px; }
   .chip { border: 1px solid var(--line); background: transparent; color: var(--hint); padding: 5px 12px;
     border-radius: 999px; font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
   .chip.on { border-color: var(--accent); color: var(--text); }
@@ -250,6 +251,8 @@
   async function api(path, body) {
     const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ initData, ...body }) });
     const j = await r.json().catch(() => ({ ok: false, error: 'Сервер недоступен' }));
+    // подпись Telegram устарела (живёт 6 часов): показываем экран «переоткрой приложение»
+    if (!j.ok && (j.code === 401 || r.status === 401) && initData) { gate({ ...j, code: 401 }); }
     if (!j.ok) throw j;
     return j;
   }
@@ -262,6 +265,10 @@
         Добавь его на Vercel в переменную <b>TG_OWNER_CHAT_ID</b>, сделай Redeploy и открой пульт снова.
         <div class="row2"><button class="btn main" id="copyId">Скопировать ID</button><button class="btn" id="retry">Проверить</button></div></div>`;
       $('copyId').onclick = () => navigator.clipboard?.writeText(err.self_id).then(() => toast('ID скопирован'), () => toast('Выдели ID и скопируй вручную'));
+    } else if (err.code === 401 && initData) {
+      g.innerHTML = `<div class="alert"><h2>Переоткрой приложение</h2>Сессия Telegram устарела, так бывает, если приложение долго было открыто. Закрой его и открой снова кнопкой «Instagram Manager» в боте
+        <div class="row2"><button class="btn main" id="reopen">Закрыть</button></div></div>`;
+      $('reopen').onclick = () => (tg?.close ? tg.close() : location.reload());
     } else {
       g.innerHTML = `<div class="alert"><h2>${initData ? 'Нет доступа' : 'Открой из Telegram'}</h2>${esc(err.error || 'Ошибка')}
         ${initData ? '<div class="row2"><button class="btn" id="retry">Повторить</button></div>' : '<p class="note">Работает только внутри бота.</p>'}</div>`;
@@ -403,12 +410,10 @@
       draw(); document.body.append(wrap);
     });
   }
-  // После выбора формата: сразу или отложить
-  async function askWhen() {
-    const choice = await new Promise(res => tg?.showPopup ? tg.showPopup({ title: 'Публикация', message: 'Когда выпустить пост после твоих согласований?', buttons: [{ id: 'now', type: 'default', text: '⚡ Сразу' }, { id: 'later', type: 'default', text: '🕒 Отложить' }, { id: 'x', type: 'cancel' }] }, id => res(id || 'x')) : res(confirm('Отложить публикацию?') ? 'later' : 'now'));
-    if (choice === 'x') return undefined;
-    if (choice === 'now') return null;
-    return pickSchedule(null);
+  // После выбора формата: сразу или отложить. Своё окно, а не второй системный попап подряд:
+  // Telegram на телефоне не успевает открыть второй попап сразу после первого, и шаг «тихо» пропадал
+  function askWhen() {
+    return new Promise(res => setTimeout(() => pickSchedule(null, 'Когда публиковать после согласования?').then(res), 150));
   }
 
   $('cards').addEventListener('click', async e => {
@@ -620,12 +625,17 @@
     if (!(await ask(POST_ASK[a] + '\n\n' + id))) return;
     b.disabled = true; const label = b.textContent; b.textContent = '⏳';
     try {
-      const out = await api('/api/pipeline', { action: a, id });
+      // финал согласуется вместе с id сборки, которую видно в списке: если робот пересобрал, сервер ответит 409
+      const extra = a === 'approve_final' ? { rid: (posts || []).find(x => x.id === id)?.rid || '' } : {};
+      const out = await api('/api/pipeline', { action: a, id, ...extra });
       haptic('success');
       toast({ apply_images: 'Кадры поставлены', publish_now: 'Публикую, ссылка придёт в бот', approve_text: 'Текст согласован, финал придёт в бот через 2–3 минуты', approve_final: 'Публикую, ссылка придёт в бот', reject: 'Отклонён', regen: 'Новый вариант текста в боте', redo: 'Вернул к тексту', retry: 'Запустил сборку заново', factcheck: 'Проверка фактов придёт в бот' }[a] || 'Готово');
       if (a === 'copy_post') { location.href = '/cover-studio/?post=' + encodeURIComponent(out.post.id); return; }
       delete postDetail[id]; await loadPosts();
-    } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); b.disabled = false; b.textContent = label; }
+    } catch (err) {
+      haptic('error'); toast(err.error || 'Не получилось'); b.disabled = false; b.textContent = label;
+      if (a === 'approve_final' && err.code === 409) { delete postDetail[id]; loadPosts(); }
+    }
   });
 
   // ---------- 🧠 ИИ: насколько обучен редактор ----------
@@ -704,9 +714,56 @@
   ];
   function renderServices() {
     $('services').innerHTML = SERVICES.map((x, i) => `<button class="li" data-svc="${i}" style="display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;cursor:pointer">
-      <span style="font-size:28px">${x.icon}</span><span style="flex:1"><b>${esc(x.title)}</b><div class="sub">${esc(x.sub)}</div></span><span class="muted">↗</span></button>`).join('');
+      <span style="font-size:28px">${x.icon}</span><span style="flex:1"><b>${esc(x.title)}</b><div class="sub">${esc(x.sub)}</div></span><span class="muted">›</span></button>`).join('');
   }
-  $('services').addEventListener('click', e => { const b = e.target.closest('[data-svc]'); if (!b) return; const x = SERVICES[Number(b.dataset.svc)]; try { tg?.openLink ? tg.openLink(x.url) : window.open(x.url, '_blank'); } catch { location.href = x.url; } });
+  // Проект открывается внутри мини-приложения (во встроенном окне), «Назад» — вернуться в Instagram Manager
+  function openExternal(url) { try { tg?.openLink ? tg.openLink(url) : window.open(url, '_blank'); } catch { location.href = url; } }
+  function onSvcMsg(e) {
+    const f = $('svcFrame'); if (!f || e.source !== f.contentWindow) return;
+    const d = e.data || {};
+    if (d.svcParams && svcCur) loadService(svcCur, d.svcParams);
+    else if (typeof d.svcOpen === 'string' && /^https?:/.test(d.svcOpen)) openExternal(d.svcOpen);
+  }
+  let svcCur = null;
+  function closeService() {
+    const v = $('svcView'); if (!v) return;
+    v.remove(); document.body.style.overflow = ''; svcCur = null;
+    window.removeEventListener('message', onSvcMsg);
+    try { tg?.BackButton?.offClick(closeService); tg?.BackButton?.hide(); } catch {}
+  }
+  async function loadService(x, params = {}) {
+    const st = $('svcLoad'), f = $('svcFrame'); if (!st || !f) return;
+    st.style.display = ''; st.textContent = 'Загружаю…';
+    try {
+      const r = await api('/api/state', { action: 'svc', id: x.id, params });
+      if (!r.html) throw new Error(r.error || 'Страница не открылась');
+      f.srcdoc = r.html; st.style.display = 'none';
+    } catch (err) {
+      st.innerHTML = `${esc(err?.error || err?.message || String(err))} <button class="btn" id="svcExt2" style="margin-left:6px;padding:4px 10px">Открыть в браузере ↗</button>`;
+      $('svcExt2').onclick = () => openExternal(x.url);
+    }
+  }
+  function openService(x) {
+    closeService();
+    svcCur = x;
+    const v = document.createElement('div');
+    v.id = 'svcView';
+    v.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;background:var(--bg)';
+    v.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(127,127,127,.25)">
+        <button id="svcBack" class="btn" style="padding:6px 12px">← Назад</button>
+        <b style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.icon + ' ' + x.title)}</b>
+        <button id="svcReload" class="btn" title="Обновить" style="padding:6px 10px">↻</button></div>
+      <div id="svcLoad" class="muted" style="padding:10px 14px;font-size:13px">Загружаю…</div>
+      <iframe id="svcFrame" sandbox="allow-scripts" style="flex:1;width:100%;border:0;background:var(--bg)"></iframe>`;
+    document.body.appendChild(v);
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('message', onSvcMsg);
+    $('svcBack').onclick = closeService;
+    $('svcReload').onclick = () => loadService(x);
+    try { tg?.BackButton?.onClick(closeService); tg?.BackButton?.show(); } catch {}
+    loadService(x);
+  }
+  $('services').addEventListener('click', e => { const b = e.target.closest('[data-svc]'); if (!b) return; openService(SERVICES[Number(b.dataset.svc)]); });
 
   // ---------- История постов ----------
   const EV = { created: '🆕 создан', text_updated: '✏️ текст изменён', approve_text: '👍 текст согласован', rendered: '🎨 собран финал', rerender: '🔁 пересборка',
@@ -830,7 +887,7 @@
       const topic = obit ? `Памяти ${name}: за что мы запомним его роли и фильмы` : `${name}: день рождения${p.age ? ', ' + p.age : ''}. Лучшие роли и почему его стоит пересмотреть`;
       const facts = obit ? `${p.name} (${name}), ${p.age} лет, умер(ла) ${p.date}. ${p.about}. Источник: ${p.link}. Тон уважительный, без сенсационности, причину смерти не обсуждать, факты о смерти перепроверить` : `${p.name} (${name}), родился(ась) в ${p.born} году${p.died ? `, умер(ла) в ${p.died}` : ''}. ${p.about}. Источник: ${p.link}`;
       try {
-        const r = await api('/api/pipeline', { action: 'create', kind, topic: topic.slice(0, 220), facts: facts.slice(0, 1400), link: p.link, scheduled_at: when });
+        const r = await api('/api/pipeline', { action: 'create', kind, topic: topic.slice(0, 220), facts: facts.slice(0, 1400), link: p.link, scheduled_at: when, mood: obit ? 'obit' : null });
         haptic('success'); toast(`Пост ${r.post.id}: текст в боте`); pp.textContent = '✓ в боте'; posts = null;
       } catch (err) { haptic('error'); toast(err.error || 'Не получилось'); pp.disabled = false; pp.textContent = '✍️ Пост'; }
       return;
@@ -925,19 +982,31 @@
       ${foot}</article>`;
   }
 
+  // Вкладки задач: новые / в работе / отложено / готово (выбор запоминается на этом устройстве)
+  let mailTab = (() => { try { return localStorage.getItem('mailTab') || 'new'; } catch { return 'new'; } })();
   function renderMail() {
     const items = mail.items || [], done = mail.done || [];
     const active = items.filter(x => !isSnoozed(x));
     const work = active.filter(x => x.status === 'work'), fresh = active.filter(x => x.status !== 'work');
     const later = items.filter(isSnoozed).sort((a, b) => Date.parse(a.remindAt) - Date.parse(b.remindAt));
     $('nMail').hidden = !active.length; $('nMail').textContent = active.length;
-    const group = (title, list) => list.length ? `<h3>${title} · ${list.length}</h3>${list.map(mailCard).join('')}` : '';
-    let html = group('🔧 В работе', work) + group('🆕 Новые', fresh);
-    if (!active.length) html += `<div class="empty"><span class="big">✅</span>Активных задач нет.<br>Поставь ⭐ на письмо в Gmail или повесь ярлык «Задачи» — через пару минут оно появится здесь.</div>`;
-    if (later.length) html += `<details class="fold" ${mailUi.remind || later.some(x => x.id === mailUi.del) ? 'open' : ''}><summary><h3>⏰ Отложено · ${later.length}</h3></summary>${later.map(mailCard).join('')}</details>`;
-    if (done.length) html += `<details class="fold"><summary><h3>✅ Готово · последние ${done.length}</h3></summary><div class="list">${done.map(d => `<div class="li"><div class="row-between"><span class="muted">${esc(d.subject)}</span><button class="mini" data-m="status" data-s="new" data-id="${esc(d.id)}">↩ Вернуть</button></div><div class="sub">${esc(fmtTime(d.date))}</div></div>`).join('')}</div></details>`;
+    // если в выбранной вкладке пусто, а в «Новых»/«В работе» есть задачи — показываем непустую
+    if (mailTab === 'new' && !fresh.length && work.length) mailTab = 'work';
+    if (mailTab === 'work' && !work.length && fresh.length) mailTab = 'new';
+    const tabs = [['new', '🆕 Новые', fresh.length], ['work', '🔧 В работе', work.length], ['later', '⏰ Отложено', later.length], ['done', '✅ Готово', done.length]];
+    let html = `<div class="chips" id="mailTabs">${tabs.map(([id, t, n]) => `<button class="chip ${mailTab === id ? 'on' : ''}" data-mtab="${id}">${t}${n ? ' · ' + n : ''}</button>`).join('')}</div>`;
+    const empty = t => `<div class="empty"><span class="big">✅</span>${t}</div>`;
+    if (mailTab === 'new') html += fresh.length ? fresh.map(mailCard).join('') : empty('Новых задач нет.<br>Поставь ⭐ на письмо в Gmail или повесь ярлык «Задачи» — через пару минут оно появится здесь.');
+    else if (mailTab === 'work') html += work.length ? work.map(mailCard).join('') : empty('В работе ничего нет.<br>Нажми «🔧 В работу» на новой задаче.');
+    else if (mailTab === 'later') html += later.length ? later.map(mailCard).join('') : empty('Отложенных задач нет.<br>Нажми ⏰ на задаче, чтобы бот напомнил позже.');
+    else html += done.length ? `<div class="list">${done.map(d => `<div class="li"><div class="row-between"><span class="muted">${esc(d.subject)}</span><button class="mini" data-m="status" data-s="new" data-id="${esc(d.id)}">↩ Вернуть</button></div><div class="sub">${esc(fmtTime(d.date))}</div></div>`).join('')}</div><p class="muted" style="font-size:12px">Последние ${done.length}</p>` : empty('Готовых задач пока нет.');
     $('ml').innerHTML = html;
   }
+  $('ml').addEventListener('click', e => {
+    const t = e.target.closest('[data-mtab]'); if (!t) return;
+    mailTab = t.dataset.mtab; try { localStorage.setItem('mailTab', mailTab); } catch {}
+    renderMail();
+  });
 
   // Применить ответ сервера к локальному списку, без перезагрузки всей почты
   function mailApply(id, patch) {

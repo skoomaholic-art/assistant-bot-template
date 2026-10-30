@@ -9,6 +9,8 @@ import { loadLearning, VISUAL_FIELDS } from './_learning.js';
 import { briefHeader, planVisuals } from './_visual.js';
 import { suggestImages } from './_autoimages.js';
 import { warningsText } from './_editorial-preflight.js';
+import { capHashtags } from './_hashtags.js';
+import { backoff, kickRobot, postsNeedingRobot, statusSnapshot } from './_kick.js';
 
 export const PIPE_PATH = 'data/pipeline/posts.json';
 export const POST_ID = /^P\d{4,6}$/;
@@ -77,7 +79,7 @@ function cleanDraft(d) {
     preset_id: s(d.preset_id, 40) || null, visual_style: s(d.visual_style, 20) || 'noir', topic: s(d.topic, 220),
     format: fmt, category: s(d.category, 20) || 'cinema', theme: s(d.theme, 20) || 'orange', layout: s(d.layout, 20) || 'editorial',
     slides: d.slides.map(x => ({ title: s(x?.title, 110), subtitle: s(x?.subtitle, 300) })),
-    caption: s(d.caption, 2200), video_script: s(d.video_script, 2900),
+    caption: capHashtags(s(d.caption, 2200)), video_script: s(d.video_script, 2900),
     verification_notes: (Array.isArray(d.verification_notes) ? d.verification_notes : []).slice(0, 6).map(x => s(x, 180)),
     visual_prefs: cleanVisual(d.visual_prefs),
     tags: cleanTags(d.tags),
@@ -86,6 +88,7 @@ function cleanDraft(d) {
     visual_brief: cleanBrief(d.visual_brief),
     music_mood: ['tense', 'calm', 'epic', 'sad', 'upbeat', 'mystery'].includes(d.music_mood) ? d.music_mood : null,
     reel_style: Object.keys(REEL_STYLES).includes(d.reel_style) ? d.reel_style : null,
+    bg_mono: d.bg_mono === true, // чёрно-белые фото (некрологи)
     image_suggestions: (Array.isArray(d.image_suggestions) ? d.image_suggestions : []).filter(x => x && /^https:\/\/(image\.tmdb\.org|assets\.fanart\.tv)\//.test(x.url) && Number.isInteger(x.slide) && x.slide >= 1 && x.slide <= 10)
       .slice(0, 10).map(x => ({ slide: x.slide, url: s(x.url, 300), thumb: /^https:\/\/(image\.tmdb\.org|assets\.fanart\.tv)\//.test(x.thumb) ? s(x.thumb, 300) : null, source: s(x.source, 20) || 'TMDB', title: s(x.title, 120), kind: x.kind === 'person' ? 'person' : 'title' })),
     credits: d.credits && Array.isArray(d.credits.lines) ? { title: s(d.credits.title, 80), lines: d.credits.lines.map(l => ({ name: s(l?.name, 50), role: s(l?.role, 50) })).filter(l => l.name).slice(0, 8) } : null,
@@ -141,7 +144,10 @@ export function replaceDraft(post, { draft, pages }, by, note) {
   if (!['text_review', 'failed', 'final_review', 'rejected', 'scheduled'].includes(post.status)) throw new ReviewError('Этот пост сейчас нельзя менять', 409);
   if (post.status === 'final_review') log(post, 'layout_updated', by);
   if (post.status === 'rejected') log(post, 'reopened', by, 'правка в конструкторе после отклонения');
+  const wasMono = post.draft?.bg_mono === true;
   post.draft = cleanDraft(draft);
+  // Ч/Б фото некролога сохраняется при «Другом варианте», смене формата и правке, если новый черновик его не задаёт
+  if (wasMono && !(draft && 'bg_mono' in draft)) post.draft.bg_mono = true;
   if (pages !== undefined) post.pages = cleanPages(pages);
   delete post.factcheck; // any prior fact check belongs to a different draft
   post.status = 'text_review'; post.approvals = {}; post.media = null; post.error = null;
@@ -200,7 +206,10 @@ export const OWNER_MADE = ['manual', 'own', 'own_text'];
 // Пресеты Reels (темп, переходы, движение, музыка) — те же ключи, что в IGM src/igm/reel.py
 export const REEL_STYLES = { dynamic: '⚡ Динамичный', calm: '🌙 Спокойный', epic: '🏔 Эпичный', thriller: '🔪 Напряжённый', nostalgic: '📼 Ностальгия', mystery: '🕯 Загадочный' };
 export const REEL_STYLE_HINT = { dynamic: 'быстрые сцены, резкие переходы', calm: 'длинные сцены, мягкие растворения', epic: 'мощные наезды, затемнения', thriller: 'рваный темп, тёмные переходы', nostalgic: 'медленно, светлые растворения', mystery: 'медленный наезд, растворения' };
-export function act(post, action, by) {
+// Короткий id сборки: финал согласуется только тот, что владелец видел (кнопки несут rid)
+export const renderId = post => post?.media?.rendered_at ? crypto.createHash('sha1').update(String(post.media.rendered_at)).digest('hex').slice(0, 8) : null;
+export const STALE_FINAL = 'Финал обновился, открой последнюю карточку';
+export function act(post, action, by, opts = {}) {
   const st = post.status;
   if (action === 'approve_text') {
     if (st !== 'text_review') throw new ReviewError('Текст уже не на согласовании', 409);
@@ -215,7 +224,9 @@ export function act(post, action, by) {
   } else if (action === 'approve_final') {
     if (st !== 'final_review') throw new ReviewError('Финал уже не на согласовании', 409);
     if (!post.approvals?.text?.by || !post.media?.images?.length) throw new ReviewError('Нет согласованного текста или готовых картинок', 409);
-    post.approvals.final = { by: String(by), at: utcNow() };
+    const rid = renderId(post);
+    if (rid && opts.rid !== rid) throw new ReviewError(STALE_FINAL, 409);
+    post.approvals.final = { by: String(by), at: utcNow(), ...(post.media?.rendered_at ? { rid: String(post.media.rendered_at) } : {}) };
     // отложенная публикация: робот выпустит пост сам, когда наступит время
     post.status = post.scheduled_at && Date.parse(post.scheduled_at) > Date.now() + 5 * 60e3 ? 'scheduled' : 'publishing';
     post.learn_stat = OWNER_MADE.includes(post.source?.kind) ? null : (post.history || []).some(h => ['redo', 'layout_updated'].includes(h.event)) ? 'final_changed' : 'final_first_ok';
@@ -270,14 +281,29 @@ export function setSchedule(post, at, by) {
 }
 
 // ---------- запись в IGM ----------
-export async function withPipe(mutate, deps = { get: ghGetJson, put: ghPutJson }) {
+// Запись с повтором при конфликте (до 6 попыток, пауза 150–600 мс). Замыкание выполняется заново
+// на свежем состоянии, поэтому всё, что нужно вызывающему, возвращайте из него, а не через внешние переменные.
+// После записи: если пост ушёл в сборку/публикацию или отложенному пора, пинаем робота (kick.json).
+export const PIPE_ATTEMPTS = 6;
+const DEFAULT_PIPE_DEPS = { get: ghGetJson, put: ghPutJson };
+export async function withPipe(mutate, deps = DEFAULT_PIPE_DEPS) {
+  const kick = 'kick' in deps ? deps.kick : (deps.get === ghGetJson ? kickRobot : null);
+  const sleep = deps.sleep || (ms => new Promise(r => setTimeout(r, ms)));
   for (let attempt = 0; ; attempt++) {
     const { data, sha } = await deps.get(PIPE_PATH);
     const state = data && Array.isArray(data.posts) ? data : emptyState();
+    const before = statusSnapshot(state);
     const result = await mutate(state);
     if (!result?.message) return result;
-    try { await deps.put(PIPE_PATH, state, sha || undefined, result.message); return result; }
-    catch (err) { if (!(err instanceof ReviewError && err.code === 409) || attempt >= 2) throw err; }
+    try { await deps.put(PIPE_PATH, state, sha || undefined, result.message); }
+    catch (err) {
+      if (!(err instanceof ReviewError && err.code === 409) || attempt >= PIPE_ATTEMPTS - 1) throw err;
+      await sleep(backoff());
+      continue;
+    }
+    const ids = kick ? postsNeedingRobot(before, state) : [];
+    if (ids.length) { try { await kick(result.message, ids); } catch (err) { console.error('kick', err?.message); } }
+    return result;
   }
 }
 
@@ -305,7 +331,13 @@ export async function ensureSlidePrompts(d, json = groqJSON) {
 
 export async function generateDraft(params, gen = generateAI, learning = null, deps = {}) {
   const l = learning || await loadLearning().catch(() => null);
-  const d = await gen(params, { rules: l?.rules || [], examples: l?.examples || [] });
+  // База знаний: прошлые посты по теме и заметки владельца, чтобы не повторяться и опираться на проверенное
+  if (params.context == null) {
+    const ctx = deps.editorContext || (async q => (await import('./_rag.js')).editorContext(q));
+    params = { ...params, context: await ctx(`${params.topic || ''} ${String(params.facts || '').slice(0, 400)}`).catch(() => '') };
+  }
+  // timeoutMs: в чате бота ждём ИИ меньше (на попытку ~15 с), чтобы уложиться в лимит функции
+  const d = await gen(params, { rules: l?.rules || [], examples: l?.examples || [], ...(params.timeoutMs ? { timeoutMs: params.timeoutMs } : {}) });
   const prefs = l?.visual_prefs?.[d.format];
   const out = { ...d, preset_id: params.presetId, topic: params.topic, ...(prefs ? { visual_prefs: prefs } : {}) };
   // Промпты: сначала разбор новости (сюжет, персонажи, конфликт, факты/допущения), потом сцена на каждый слайд
@@ -316,12 +348,12 @@ export async function generateDraft(params, gen = generateAI, learning = null, d
   return out;
 }
 export const postKind = d => d.format === 'reel' ? 'reel' : (d.slides || []).length > 1 ? 'carousel' : 'post';
-export async function regenerate(post, feedback, gen = generateAI, kind = null) {
+export async function regenerate(post, feedback, gen = generateAI, kind = null, opts = {}) {
   const topic = post.source?.topic || post.draft.topic || post.draft.slides[0].title;
   const presetId = kind ? presetFor(kind, topic + ' ' + (post.draft.category === 'series' ? 'сериал' : '')) : (post.draft.preset_id || post.source?.preset_id);
   if (!PRESETS[presetId]) throw new ReviewError('Для этого поста нет пресета ИИ — поправь текст в конструкторе', 409);
   const fb = kind ? `Переделай в формат: ${{ post: 'пост-картинка (одна обложка, мысль в подписи)', carousel: 'карусель из нескольких слайдов', reel: 'Reels (одна обложка 9:16 и сценарий озвучки)' }[kind]}. Сохрани тему, факты и подачу.` : feedback;
-  return generateDraft({ presetId, styleId: post.draft.visual_style, topic, facts: post.source?.facts || '', voice: post.source?.voice, feedback: fb, previous: kind ? null : post.draft }, gen);
+  return generateDraft({ presetId, styleId: post.draft.visual_style, topic, facts: post.source?.facts || '', voice: post.source?.voice, feedback: fb, previous: kind ? null : post.draft, ...(opts.timeoutMs ? { timeoutMs: opts.timeoutMs } : {}) }, gen);
 }
 const FORMAT_SWITCH = { post: '🖼 В пост', carousel: '📚 В карусель', reel: '🎬 В Reels' };
 
@@ -377,7 +409,7 @@ export const textButtons = (post, host) => [
 ];
 // у своего контента нет конструктора: кнопки другие (см. _own.js)
 export const finalButtons = (post, host) => [
-  [{ text: post.scheduled_at ? `✅ Публиковать ${almatyTime(post.scheduled_at)}` : '✅ Публиковать', callback_data: `pl:${post.id}:approve_final` },
+  [{ text: post.scheduled_at ? `✅ Публиковать ${almatyTime(post.scheduled_at)}` : '✅ Публиковать', callback_data: `pl:${post.id}:approve_final${renderId(post) ? ':' + renderId(post) : ''}` },
     ...(host ? [{ text: '🕒 Время', web_app: { url: `https://${host}/?post=${post.id}&schedule=1` } }] : [])],
   ...(host ? [[{ text: '🎨 Вёрстка', web_app: { url: `https://${host}/cover-studio/?post=${post.id}` } }, { text: '🎬 Кадры', web_app: { url: `https://${host}/cover-studio/?post=${post.id}&images=1` } }]] : []),
   [{ text: '📥 Опубликую сам', callback_data: `pl:${post.id}:handoff` }],
@@ -471,7 +503,9 @@ export async function sendFinal(post, host, tg = tgCall) {
   const chat = Number(ownerId());
   const imgs = post.media?.images || [];
   if (post.draft.format === 'reel' && post.media?.video) {
-    await tg('sendVideo', { chat_id: chat, video: mediaUrl(host, post.media.video), supports_streaming: true, width: 1080, height: 1920 });
+    const v = await tg('sendVideo', { chat_id: chat, video: mediaUrl(host, post.media.video), supports_streaming: true, width: 1080, height: 1920 });
+    // видео отдаётся редиректом на GitHub: если Telegram его не принял, даём ссылку, чтобы финал можно было посмотреть
+    if (v && v.ok === false) await tg('sendMessage', { chat_id: chat, text: `🎬 Ролик ${post.id}: Telegram не показал видео, открой по ссылке (действует сутки)\n${mediaUrl(host, post.media.video)}`, disable_web_page_preview: true });
   } else if (imgs.length > 1) {
     await tg('sendMediaGroup', { chat_id: chat, media: imgs.slice(0, 10).map(p => ({ type: 'photo', media: mediaUrl(host, p) })) });
   } else if (imgs.length) {
@@ -500,6 +534,6 @@ export function summary(post) {
     id: post.id, kind: post.source?.kind || null, status: post.status, status_label: post.ig_archived_at_utc ? '📦 Архивировано' : (STATUS_LABEL[post.status] || post.status), format: post.draft?.format,
     archived: Boolean(post.ig_archived_at_utc), archived_at_utc: post.ig_archived_at_utc || null, copied_from: post.copied_from || null,
     title: post.draft?.slides?.[0]?.title || '', updated_at_utc: post.updated_at_utc, permalink: post.ig?.permalink || null,
-    error: post.error?.message || null, scheduled_at: post.scheduled_at || null, suggested_images: pendingSuggestions(post).length,
+    error: post.error?.message || null, scheduled_at: post.scheduled_at || null, suggested_images: pendingSuggestions(post).length, rid: renderId(post),
   };
 }

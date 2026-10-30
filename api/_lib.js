@@ -9,7 +9,7 @@ export const SNAPSHOT_DIR = 'data/snapshots';
 export const ITEM_ID = /^[A-Za-z0-9_-]{3,36}$/;
 export const KINDS = new Set(['reply', 'post', 'external_comment']);
 export const BLOCKED_USERNAMES = new Set(['aika_st']);
-const INIT_MAX_AGE_MS = 24 * 3600 * 1000;
+export const INIT_MAX_AGE_MS = 6 * 3600 * 1000; // подпись Mini App живёт 6 часов, дальше — переоткрыть приложение
 
 export class ReviewError extends Error {
   constructor(message, code = 400) { super(message); this.code = code; }
@@ -24,7 +24,7 @@ export const utcNow = () => new Date().toISOString().replace(/\.\d{3}Z$/, '+00:0
 export const normalizeUsername = u => String(u ?? '').trim().replace(/^@+/, '').toLowerCase();
 export const isBlockedUsername = u => BLOCKED_USERNAMES.has(normalizeUsername(u));
 
-// Проверка подписи initData из Telegram Mini App (как в «Ойынхане», окно — сутки)
+// Проверка подписи initData из Telegram Mini App (окно — 6 часов)
 export function verifyInitData(initData, token = botToken(), now = Date.now()) {
   if (!initData || typeof initData !== 'string' || !token) return null;
   let params;
@@ -54,7 +54,7 @@ export function verifyInitData(initData, token = botToken(), now = Date.now()) {
 export function authorize(initData) {
   if (!botToken()) throw new ReviewError('На Vercel не задан TG_BOT_TOKEN', 503);
   const user = verifyInitData(initData);
-  if (!user) throw new ReviewError('Открой пульт из Telegram-бота', 401);
+  if (!user) throw new ReviewError('Сессия устарела или пульт открыт не из Telegram. Переоткрой приложение из бота', 401);
   const owner = ownerId();
   if (!owner) {
     const err = new ReviewError('Владелец не настроен: добавь TG_OWNER_CHAT_ID на Vercel', 503);
@@ -199,7 +199,12 @@ export async function ghPutBinary(path, buffer, message, fetchImpl = fetch) {
     headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, content: Buffer.from(buffer).toString('base64') }),
   });
-  if (r.status === 422) return true; // уже загружен (тот же путь)
+  if (r.status === 422) {
+    // 422 бывает и «файл уже есть» (без sha), и ошибка запроса: считаем загруженным, только если файл реально лежит по пути
+    const head = await fetchImpl(ghUrl(path), { headers: ghHeaders() }).catch(() => null);
+    if (head?.ok) { const meta = await head.json().catch(() => null); if (meta && !Array.isArray(meta) && meta.type === 'file') return true; }
+    throw new ReviewError('Не удалось сохранить файл в IGM (GitHub 422)', 502);
+  }
   if (!r.ok) throw new ReviewError('Не удалось сохранить файл в IGM (GitHub ' + r.status + ')', 502);
   return true;
 }

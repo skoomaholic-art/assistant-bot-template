@@ -92,12 +92,76 @@ export function articleText(html, max = 2500) {
     .filter(t => t.length > 60 && !/cookie|подпис|subscribe|реклам/i.test(t));
   return paras.join('\n').slice(0, max);
 }
-export async function fetchArticle(link, fetchImpl = fetch) {
+// Загрузка статьи по ссылке из новостей (SSRF-защита): только https, без IP-адресов, localhost и
+// внутренних имён; редиректы вручную (до 3), каждый шаг проверяется заново; только HTML и не больше 2 МБ
+export const ARTICLE_MAX_BYTES = 2 * 1024 * 1024;
+const MAX_HOPS = 3;
+export function isPrivateIp(ip) {
+  const v = String(ip || '').toLowerCase().replace(/^\[|\]$/g, '');
+  const m = v.match(/^(?:::ffff:)?(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19));
+  }
+  if (v.includes(':')) return v === '::' || v === '::1' || /^f[cd]/.test(v) || /^fe[89ab]/.test(v) || /^ff/.test(v) || /^64:ff9b:/.test(v) || /^::ffff:/.test(v);
+  return false;
+}
+export function safeArticleUrl(raw) {
+  let u;
+  try { u = new URL(String(raw)); } catch { return null; }
+  if (u.protocol !== 'https:' || u.username || u.password || (u.port && u.port !== '443')) return null;
+  const h = u.hostname.toLowerCase().replace(/\.$/, '');
+  if (!h || !h.includes('.') || /^\[|:/.test(h) || /^\d{1,3}(\.\d{1,3}){3}$/.test(h) || /^\d+$/.test(h) || /^0x/i.test(h)) return null;
+  if (h === 'localhost' || /\.(localhost|local|internal|lan|home|corp|intranet)$/.test(h) || h === 'metadata.google.internal') return null;
+  return u;
+}
+async function readCapped(r, max) {
+  if (r.body?.getReader) {
+    const reader = r.body.getReader();
+    const chunks = []; let size = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > max) { await reader.cancel().catch(() => {}); return null; }
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks.map(c => Buffer.from(c))).toString('utf8');
+  }
+  const t = await r.text();
+  return t.length > max ? null : t;
+}
+export async function fetchArticle(link, fetchImpl = fetch, { lookup = null } = {}) {
   if (!/^https:\/\//.test(link) || /news\.google\.com/.test(link)) return '';
+  // DNS проверяем по-настоящему только с обычным fetch (в тестах сети нет)
+  const resolve = lookup || (fetchImpl === fetch ? async h => (await import('node:dns/promises')).lookup(h, { all: true }) : null);
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 6000);
   try {
-    const r = await fetchImpl(link, { signal: ctrl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; IGM-editor/1.0)', Accept: 'text/html' } });
-    return r.ok ? articleText(await r.text()) : '';
+    let url = link;
+    for (let hop = 0; hop <= MAX_HOPS; hop++) {
+      const u = safeArticleUrl(url);
+      if (!u) return '';
+      if (resolve) {
+        const addrs = await resolve(u.hostname).catch(() => []);
+        if (!addrs.length || addrs.some(a => isPrivateIp(a.address || a))) return '';
+      }
+      const r = await fetchImpl(u.toString(), { redirect: 'manual', signal: ctrl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; IGM-editor/1.0)', Accept: 'text/html' } });
+      if (r.status >= 300 && r.status < 400) {
+        const loc = r.headers?.get?.('location');
+        if (!loc || hop === MAX_HOPS) return '';
+        url = new URL(loc, u).toString();
+        continue;
+      }
+      if (!r.ok) return '';
+      const type = String(r.headers?.get?.('content-type') || '');
+      if (!/^\s*(text\/html|application\/xhtml\+xml)/i.test(type)) return '';
+      const len = Number(r.headers?.get?.('content-length') || 0);
+      if (len > ARTICLE_MAX_BYTES) return '';
+      const html = await readCapped(r, ARTICLE_MAX_BYTES);
+      return html ? articleText(html) : '';
+    }
+    return '';
   } catch { return ''; } finally { clearTimeout(t); }
 }
 

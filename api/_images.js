@@ -66,13 +66,17 @@ export async function listImages(type, id, fetchImpl = fetch) {
   return out;
 }
 
+export const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 export async function fetchImage(url, fetchImpl = fetch) {
   if (!IMG_HOSTS.test(String(url))) throw new ReviewError('Изображение не с разрешённого источника', 400);
-  const r = await fetchImpl(url).catch(() => null);
+  // redirect:'error' — разрешённый хост не может увести на чужой адрес; размер проверяем до чтения тела
+  const r = await fetchImpl(url, { redirect: 'error', signal: AbortSignal.timeout(15000) }).catch(() => null);
   if (!r?.ok) throw new ReviewError('Не удалось скачать изображение', 502);
   const type = r.headers?.get?.('content-type') || 'image/jpeg';
   if (!/^image\/(jpeg|png)/.test(type)) throw new ReviewError('Это не картинка', 400);
+  const declared = Number(r.headers?.get?.('content-length') || 0);
+  if (declared > MAX_IMAGE_BYTES) throw new ReviewError('Картинка слишком большая', 413);
   const buf = Buffer.from(await r.arrayBuffer());
-  if (buf.length > 6 * 1024 * 1024) throw new ReviewError('Картинка слишком большая', 413);
+  if (buf.length > MAX_IMAGE_BYTES) throw new ReviewError('Картинка слишком большая', 413);
   return { buf, type };
 }

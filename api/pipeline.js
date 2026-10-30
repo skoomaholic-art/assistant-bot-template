@@ -3,7 +3,7 @@
 //  { action:'get', id }                                      → пост целиком (для конструктора)
 //  { action:'create', presetId, styleId?, topic, facts?, voice?, link? } → ИИ пишет текст → карточка на согласование в бот
 //  { action:'submit', id?, draft, pages? }                   → текст из конструктора на согласование (новый или правка)
-//  { action:'approve_text'|'approve_final'|'redo'|'retry'|'reject', id }
+//  { action:'approve_text'|'redo'|'retry'|'reject', id } · { action:'approve_final', id, rid } (rid — id сборки из list)
 //  { action:'regen', id, feedback? }                         → ИИ переписывает текст
 //  { action:'set_bg', id, slide, url, source, title, rights:true } → кадр/постер из TMDB или fanart.tv на слайд
 //  { action:'clear_bg', id, slide }                            → убрать картинку со слайда
@@ -37,8 +37,17 @@ export function findDuplicates(posts) {
   return out;
 }
 
+// Проверка входа create: ссылка только https и без мусора, голос из списка, стиль строкой до 40
+export const LINK_RE = /^https:\/\/[^\s<>"]{1,500}$/;
+export function cleanCreateInput(body) {
+  const link = typeof body.link === 'string' && LINK_RE.test(body.link.trim()) ? body.link.trim() : null;
+  const voice = ['ironic', 'thoughtful'].includes(body.voice) ? body.voice : 'thoughtful';
+  const styleId = typeof body.styleId === 'string' && body.styleId.length <= 40 ? body.styleId : undefined;
+  return { link, voice, styleId };
+}
+
 const safeLearn = async signal => { try { await learn(signal); } catch (err) { console.error('learn', err?.message); } };
-import { act, copyToDraft, createPost, findPost, generateDraft, POST_ID, presetFor, regenerate, replaceDraft, sendTextCard, setArchiveMarker, summary, tgCall, withPipe } from './_pipeline.js';
+import { act, almatyTime, cleanSchedule, copyToDraft, createPost, findPost, generateDraft, POST_ID, presetFor, regenerate, replaceDraft, sendTextCard, setArchiveMarker, setSchedule, summary, tgCall, withPipe } from './_pipeline.js';
 
 const host = req => String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
 
@@ -125,10 +134,12 @@ export default async function handler(req, res) {
     }
     if (action === 'create') {
       const topic = String(body.topic || '').trim().slice(0, 220);
+      Object.assign(body, cleanCreateInput(body));
       const sched = cleanSchedule(body.scheduled_at); // проверяем до генерации, чтобы не тратить ИИ зря
       const presetId = body.presetId || presetFor(['carousel', 'reel'].includes(body.kind) ? body.kind : 'post', topic);
       body.presetId = presetId;
       const draft = await generateDraft({ presetId, styleId: body.styleId, topic, facts: body.facts, voice: body.voice });
+      if (body.mood === 'obit' || /^памяти\s/i.test(topic)) draft.bg_mono = true; // некролог: фото по умолчанию чёрно-белые
       const r = await withPipe(s => {
         const post = createPost(s, { draft, source: { kind: body.link ? 'news' : 'app', topic: body.topic, facts: body.facts, preset_id: body.presetId, style_id: body.styleId, voice: body.voice, link: body.link } }, by);
         if (sched) post.scheduled_at = sched;
@@ -179,7 +190,7 @@ export default async function handler(req, res) {
     if (action === 'apply_images') {
       const r = await applySuggestedImages(body.id, by);
       if (r.rerender) await tgCall('sendMessage', { chat_id: Number(by), text: `🎬 ${body.id}: кадры поставлены, пересобираю финал` });
-      return reply(res, 200, { ok: true, ...r });
+      return reply(res, 200, { ok: true, slides: r.slides, total: r.total, rerender: r.rerender, post: summary(r.post) });
     }
     if (action === 'schedule') {
       const r = await withPipe(s => ({ post: setSchedule(findPost(s, body.id), body.at ?? null, by), message: `pipeline: schedule ${body.id}` }));
@@ -194,7 +205,9 @@ export default async function handler(req, res) {
       return reply(res, 200, { ok: true, post: summary(r.post) });
     }
     if (['approve_text', 'approve_final', 'redo', 'retry', 'reject', 'publish_now'].includes(action)) {
-      const r = await withPipe(s => ({ post: act(findPost(s, body.id), action, by), message: `pipeline: ${action} ${body.id}` }));
+      // финал согласуется только той сборки, которую владелец видел (rid из списка постов)
+      const rid = action === 'approve_final' ? (/^[0-9a-f]{8}$/.test(String(body.rid || '')) ? String(body.rid) : null) : undefined;
+      const r = await withPipe(s => ({ post: act(findPost(s, body.id), action, by, { rid }), message: `pipeline: ${action} ${body.id}` }));
       if (r.post.learn_stat && ['approve_text', 'approve_final'].includes(action)) await safeLearn({ type: 'stat', key: r.post.learn_stat, post: r.post.id });
       if (r.post.status === 'text_review') await sendTextCard(r.post, h);
       if (action === 'approve_text') await tgCall('sendMessage', { chat_id: Number(by), text: `🎨 Пост ${r.post.id}: текст согласован, собираю в конструкторе. Финал пришлю через ~2 минуты.` });

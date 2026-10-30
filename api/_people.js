@@ -2,6 +2,7 @@
 // Умершие — страница «Deaths in <Month> <Year>», дни рождения — страница даты («October 29»).
 // Известность — число языковых версий статьи (Wikidata sitelinks), русское имя — из Wikidata.
 const UA = { 'User-Agent': 'MyBrandAssistant/1.0 (personal Instagram helper)', Accept: 'application/json' };
+export const WIKI_TIMEOUT_MS = 8000; // Википедия иногда отвечает долго: не держим функцию до её лимита
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export const FILM_RE = /\b(actor|actress|film director|director|filmmaker|screenwriter|showrunner|television presenter|comedian|voice actor|cinematographer|film producer|animator)\b/i;
 
@@ -52,7 +53,7 @@ export function parseBirths(wikitext, { year }) {
 
 async function wikitext(page, fetchImpl) {
   const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(page)}&prop=wikitext&format=json&formatversion=2&redirects=1`;
-  const r = await fetchImpl(url, { headers: UA });
+  const r = await fetchImpl(url, { headers: UA, signal: AbortSignal.timeout(WIKI_TIMEOUT_MS) });
   if (!r.ok) throw new Error('wikipedia ' + r.status);
   const j = await r.json();
   if (j.error) throw new Error('wikipedia: ' + j.error.code);
@@ -65,7 +66,7 @@ export async function enrich(people, fetchImpl = fetch) {
   for (let i = 0; i < people.length; i += 50) {
     const titles = people.slice(i, i + 50).map(p => p.title).join('|');
     const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=${encodeURIComponent(titles)}&props=labels|sitelinks&languages=ru|en&format=json`;
-    const r = await fetchImpl(url, { headers: UA }).catch(() => null);
+    const r = await fetchImpl(url, { headers: UA, signal: AbortSignal.timeout(WIKI_TIMEOUT_MS) }).catch(() => null);
     if (!r?.ok) continue;
     const j = await r.json().catch(() => ({}));
     for (const e of Object.values(j.entities || {})) {

@@ -12,7 +12,7 @@ const draft = t => ({ format: 'reel', slides: [{ title: t, subtitle: 's' }], cap
 
 test('feedback becomes a rule (AI distill), stats and layout prefs accumulate', async () => {
   const st = store();
-  const distill = async (rules, sig) => [...rules, 'Пиши заголовки без вопросов: ' + sig.feedback];
+  const distill = async (rules, sig) => ({ op: 'add', rule: 'Пиши заголовки без вопросов: ' + sig.feedback });
   await learn({ type: 'text_feedback', post: 'P0001', feedback: 'без вопросов' }, { deps: st, distill });
   assert.deepEqual(st.doc.rules, ['Пиши заголовки без вопросов: без вопросов']);
   await learn({ type: 'stat', key: 'text_first_ok' }, { deps: st, distill });
@@ -25,8 +25,8 @@ test('feedback becomes a rule (AI distill), stats and layout prefs accumulate', 
 });
 
 test('distill falls back to verbatim rule without AI key', async () => {
-  const r = await distillRules(['a rule'], { feedback: 'короче подпись' }, { key: '' });
-  assert.deepEqual(r, ['a rule', 'короче подпись']);
+  const r = await distillRules(['a rule'], { type: 'text_feedback', feedback: 'короче подпись' }, { key: '' });
+  assert.deepEqual(r, { op: 'add', rule: 'короче подпись' });
 });
 
 test('diff helpers', () => {

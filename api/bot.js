@@ -1,7 +1,8 @@
 // Telegram webhook бота-ассистента (мгновенные ответы вместо опроса раз в 30 минут).
 // Переменные Vercel: TG_BOT_TOKEN, TG_OWNER_CHAT_ID, IGM_BRIDGE_TOKEN, TG_WEBHOOK_SECRET.
 //
-// GET  /api/bot                         → самопроверка: что задано и куда смотрит вебхук (без секретов)
+// GET  /api/bot                         → «ok» (без ключа ничего не рассказывает)
+// GET  /api/bot?key=<TG_WEBHOOK_SECRET>  → самопроверка: что задано и куда смотрит вебхук (без секретов)
 // GET  /api/bot?install=<TG_WEBHOOK_SECRET> → подключить вебхук, кнопку «Instagram Manager» и меню команд
 // POST /api/bot                         → обновления от Telegram (только с верным secret_token)
 import crypto from 'node:crypto';
@@ -13,12 +14,14 @@ import { runEditor } from './_editor.js';
 import { mailCallback } from './mail.js';
 import { factcheckPost, factcheckMessage } from './_gemini-factcheck.js';
 import { groqJSON } from './_groq.js';
+import { addNote, answer, answerText, loadNotes, removeNote } from './_rag.js';
 import { addMusic, attachClip, addOwnMedia, aiCaption, applySuggestedImages, attachBackground, extractAudio, extractMedia, ownButtons, ownCard, setCaption } from './_own.js';
 import { draftDigest, learn, loadLearning, rate, withLearning } from './_learning.js';
 import { planVisuals } from './_visual.js';
-import { REEL_STYLES, mediaUrl, almatyTime, ensureSlidePrompts, sendPrompts, promptMessage, sendFinal, act, createPost, findPost, generateDraft, presetFor, regenerate, replaceDraft, summary, textButtons, textCard, withPipe } from './_pipeline.js';
+import { REEL_STYLES, STALE_FINAL, mediaUrl, almatyTime, ensureSlidePrompts, sendPrompts, promptMessage, sendFinal, act, createPost, findPost, generateDraft, presetFor, regenerate, replaceDraft, summary, textButtons, textCard, withPipe } from './_pipeline.js';
 
 const ITEM_ID = /^[A-Za-z0-9_-]{3,36}$/;
+const BOT_AI_MS = 15000; // на попытку ИИ в чате: три попытки должны уложиться в 60 с функции
 const MAX_SHOWN = 8;
 const KIND = { post: 'Публикация', reply: 'Ответ', external_comment: 'Свой комментарий' };
 const STATUS = { pending: 'ждёт', needs_revision: 'на доработке', approved: 'одобрено', rejected: 'отклонено' };
@@ -30,6 +33,9 @@ const COMMANDS = [
   ['idea', 'ИИ-редактор: найти тему сейчас'],
   ['rules', 'Правила редакции, которые выучил ИИ'],
   ['lab', 'Лаборатория: что набирает просмотры'],
+  ['ask', 'Спросить ИИ по базе: посты, заметки, почта'],
+  ['note', 'Заметка в базу знаний: /note текст'],
+  ['notes', 'Заметки в базе знаний'],
   ['start', 'Меню ассистента'],
   ['pending', 'Instagram: карточки на проверку'],
   ['status', 'Instagram: состояние очереди'],
@@ -51,7 +57,20 @@ export async function syncCommands(owner, call = tg) {
 }
 let commandsSynced = false;
 
-const secret = () => String(process.env.TG_WEBHOOK_SECRET || '').trim();
+// Секрет короче 24 символов считаем незаданным: его можно подобрать
+export const MIN_SECRET = 24;
+const secret = () => { const s = String(process.env.TG_WEBHOOK_SECRET || '').trim(); return s.length >= MIN_SECRET ? s : ''; };
+
+// Telegram повторяет апдейт, если ответ был медленным или с ошибкой: помним последние update_id
+const SEEN_MAX = 500;
+const seenUpdates = new Map();
+export function seenUpdate(id) {
+  if (!Number.isInteger(id)) return false;
+  if (seenUpdates.has(id)) return true;
+  seenUpdates.set(id, Date.now());
+  if (seenUpdates.size > SEEN_MAX) seenUpdates.delete(seenUpdates.keys().next().value);
+  return false;
+}
 export function sameSecret(a, b) {
   const x = Buffer.from(String(a || '')), y = Buffer.from(String(b || ''));
   return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
@@ -104,7 +123,7 @@ function reviewList(state, kind) {
   return cards.slice(0, MAX_SHOWN).map(c => ({ text: formatCard(c), keyboard: reviewButtons(c.id) }));
 }
 
-const HELP = 'Instagram Manager\n\nСвой контент: пришли фото, альбом, видео (до 20 МБ) или текст — бот сделает пост и пришлёт на согласование. Подпись: ответь на карточку текстом, /cap ID текст, /aicap ID о чём пост.\n\nПосты (ИИ → согласование текста → сборка → согласование финала → публикация):\n/post тема — пост-картинка\n/carousel тема — карусель\n/reel тема — Reels\n/fix ID что изменить — переписать текст\n/drafts — посты в работе\n/idea — ИИ-редактор найдёт тему в новостях сейчас (сам он приходит раз в день утром)\n/no ID причина — почему отклонил (ИИ учтёт)\n/rules — что ИИ выучил · /forget N — забыть правило\n\nКнопки «📷 Instagram Manager» и «🎨 Конструктор обложек» открывают приложение.\n\nКоманды Instagram (IGM):\n/pending — все карточки\n/posts — публикации\n/comments — ответы и свои комментарии\n/status — состояние\n/edit ID текст — исправить\n/why ID причина — объяснить решение';
+const HELP = 'Instagram Manager\n\nСвой контент: пришли фото, альбом, видео (до 20 МБ) или текст — бот сделает пост и пришлёт на согласование. Подпись: ответь на карточку текстом, /cap ID текст, /aicap ID о чём пост.\n\nПосты (ИИ → согласование текста → сборка → согласование финала → публикация):\n/post тема — пост-картинка\n/carousel тема — карусель\n/reel тема — Reels\n/fix ID что изменить — переписать текст\n/drafts — посты в работе\n/idea — ИИ-редактор найдёт тему в новостях сейчас (сам он приходит раз в день утром)\n/no ID причина — почему отклонил (ИИ учтёт)\n/rules — что ИИ выучил · /forget N — забыть правило\n\nБаза знаний (ИИ ищет в ней перед ответом и перед написанием постов):\n/ask вопрос — или просто напиши вопрос со знаком «?» в конце\n/note текст — добавить заметку (факт, договорённость, идея)\n/notes — последние заметки · /unnote N — удалить\n\nКнопки «📷 Instagram Manager» и «🎨 Конструктор обложек» открывают приложение.\n\nКоманды Instagram (IGM):\n/pending — все карточки\n/posts — публикации\n/comments — ответы и свои комментарии\n/status — состояние\n/edit ID текст — исправить\n/why ID причина — объяснить решение';
 
 // Только личный чат владельца
 export function isOwnerUpdate(update, owner) {
@@ -129,23 +148,37 @@ async function withQueue(mutate, deps) {
 
 // Возвращает список действий: [{type:'send', text, keyboard?} | {type:'ack', text}]
 async function safeLearn(deps, signal) {
-  try { await (deps.learn || learn)(signal, { deps: deps.learnDeps }); } catch (err) { console.error('learn', err?.message); }
+  try {
+    const r = await (deps.learn || learn)(signal, { deps: deps.learnDeps });
+    // новое или уточнённое правило редакции показываем владельцу: видно, что ИИ понял, и можно /forget
+    if (r?.rule?.text && deps.notify) await deps.notify(`📏 ${r.rule.op === 'update' ? 'Уточнил правило' : 'Новое правило'} редакции: «${r.rule.text}»\nВсе правила: /rules`);
+  } catch (err) { console.error('learn', err?.message); }
 }
 
 // Решение по посту из кнопки или /fix
-async function pipelineAction(id, action, feedback, { owner, host, deps }, fromButton) {
+async function pipelineAction(id, action, feedback, { owner, host, deps, rid = null }, fromButton) {
   const pipe = deps.pipe || withPipe;
   const ack = fromButton ? [{ type: 'ack', text: '' }] : [];
+  // Финал согласуется только с кнопки той сборки, которую владелец видел: старая кнопка без rid
+  // или с чужим rid → присылаем актуальный финал заново
+  const staleFinal = async () => {
+    const cur = await pipe(st => ({ post: findPost(st, id) }));
+    if (cur.post.status !== 'final_review') return [{ type: 'ack', text: 'Финал уже не на согласовании' }];
+    return [{ type: 'ack', text: STALE_FINAL }, { type: 'send', text: `🔄 ${id}: кнопка устарела, финал обновился. Ниже актуальная версия` }, { type: 'final', post: cur.post }];
+  };
   try {
+    if (action === 'approve_final' && !rid) return await staleFinal();
     if (action === 'regen') {
       await deps.notify?.(`✍️ Переписываю ${id}…`);
       const cur = await pipe(st => ({ post: findPost(st, id) }));
-      const draft = await (deps.regenerate || regenerate)(cur.post, feedback);
+      const draft = await (deps.regenerate || regenerate)(cur.post, feedback, undefined, null, { timeoutMs: BOT_AI_MS });
       const r = await pipe(st => ({ post: replaceDraft(findPost(st, id), { draft, pages: null }, owner, feedback || 'другой вариант'), message: `pipeline: regen ${id}` }));
       if (feedback) await safeLearn(deps, { type: 'text_feedback', post: id, feedback, before: draftDigest(cur.post.draft) });
       return [...ack, { type: 'send', text: textCard(r.post), keyboard: textButtons(r.post, host), after: promptMessage(r.post) }];
     }
-    const r = await pipe(st => ({ post: act(findPost(st, id), action, owner), message: `pipeline: ${action} ${id}` }));
+    let r;
+    try { r = await pipe(st => ({ post: act(findPost(st, id), action, owner, { rid }), message: `pipeline: ${action} ${id}` })); }
+    catch (err) { if (action === 'approve_final' && err instanceof ReviewError && err.message === STALE_FINAL) return await staleFinal(); throw err; }
     const p = r.post;
     if (p.learn_stat && ['approve_text', 'approve_final'].includes(action)) await safeLearn(deps, { type: 'stat', key: p.learn_stat, post: id });
     const msg = {
@@ -176,7 +209,7 @@ export function guestReply(update, owner, host) {
   const chat = m.chat.id;
   return [
     { method: 'sendMessage', body: { chat_id: chat, disable_web_page_preview: true, text: 'Привет! Это личный ИИ-помощник для Instagram, он работает только для своего владельца.\n\nХочешь такой же себе? Он называется Instagram Manager. Ниже пошаговый гайд: как создать своего бота, подключить Instagram, GitHub и Vercel, где взять ключи и что делать при ошибках. Всё на бесплатных тарифах, программировать не нужно' } },
-    { method: 'sendDocument', body: { chat_id: chat, document: `https://${host}/guide/setup-guide.pdf`, caption: 'Instagram Manager: гайд по установке, 9 шагов, 1,5–2 часа' } },
+    { method: 'sendDocument', body: { chat_id: chat, document: `https://${host}/guide/setup-guide.pdf?v=${String(process.env.VERCEL_GIT_COMMIT_SHA || Date.now()).slice(0, 8)}`, caption: 'Instagram Manager: гайд по установке, 9 шагов, 1,5–2 часа' } },
   ];
 }
 
@@ -213,7 +246,7 @@ export async function handleUpdate(update, { owner, host, deps }) {
         let credits = cur.post.draft.credits;
         if (!cur.post.draft.credits_on && !credits?.lines?.length) {
           await deps.notify?.('🎞 Собираю титры…');
-          const o = await (deps.json || groqJSON)([{ role: 'system', content: 'Составь титры для последнего слайда карусели о фильме/сериале: только люди, о ком говорится в слайдах (актёр и его роль, режиссёр), 2-6 строк. Имена только если абсолютно уверен или они есть в фактах; иначе пустой список. Без длинных тире. JSON: {"title":"Название (год)","lines":[{"name":"","role":""}]}' }, { role: 'user', content: JSON.stringify({ topic: cur.post.source?.topic, facts: cur.post.source?.facts, slides: cur.post.draft.slides }) }], { maxTokens: 1200, temperature: 0.2 });
+          const o = await (deps.json || groqJSON)([{ role: 'system', content: 'Составь титры для последнего слайда карусели о фильме/сериале: только люди, о ком говорится в слайдах (актёр и его роль, режиссёр), 2-6 строк. Имена только если абсолютно уверен или они есть в фактах; иначе пустой список. Без длинных тире. JSON: {"title":"Название (год)","lines":[{"name":"","role":""}]}' }, { role: 'user', content: JSON.stringify({ topic: cur.post.source?.topic, facts: cur.post.source?.facts, slides: cur.post.draft.slides }) }], { maxTokens: 1200, temperature: 0.2, timeoutMs: BOT_AI_MS });
           credits = { title: String(o?.title || '').slice(0, 80), lines: (Array.isArray(o?.lines) ? o.lines : []).map(l => ({ name: String(l?.name || '').slice(0, 50), role: String(l?.role || '').slice(0, 50) })).filter(l => l.name).slice(0, 8) };
           if (credits.lines.length < 2) return [{ type: 'ack', text: '' }, { type: 'send', text: `🎞 ${crm[1]}: ИИ не уверен в именах, титры не добавил. Можно вписать вручную в конструкторе последним слайдом` }];
         }
@@ -264,7 +297,7 @@ export async function handleUpdate(update, { owner, host, deps }) {
         try { await (deps.planVisuals || planVisuals)(d, { source: cur.post.source?.facts || '', avoid: prev }); planned = true; } catch (err) { console.error('visual plan', err?.message); }
         if (planned) { /* новые сцены по разбору новости */ }
         else if ((d.slides || []).length > 1) await (deps.ensureSlidePrompts || ensureSlidePrompts)(d);
-        else d.image_prompt = (await (deps.json || groqJSON)([{ role: 'system', content: 'Write ONE new image-generation prompt in English for an Instagram cover about film/TV: a different cinematic scene-metaphor, no text, no logos, no real actors or famous characters, no movie stills, dark tones, empty space for a title. JSON: {"prompt":"..."}' }, { role: 'user', content: JSON.stringify({ title: d.slides?.[0]?.title, previous: d.image_prompt }) }], { maxTokens: 800 }))?.prompt || d.image_prompt;
+        else d.image_prompt = (await (deps.json || groqJSON)([{ role: 'system', content: 'Write ONE new image-generation prompt in English for an Instagram cover about film/TV: a different cinematic scene-metaphor, no text, no logos, no real actors or famous characters, no movie stills, dark tones, empty space for a title. JSON: {"prompt":"..."}' }, { role: 'user', content: JSON.stringify({ title: d.slides?.[0]?.title, previous: d.image_prompt }) }], { maxTokens: 800, timeoutMs: BOT_AI_MS }))?.prompt || d.image_prompt;
         const r = await (deps.pipe || withPipe)(st => { const p = findPost(st, prm[1]); p.draft.image_prompts = d.image_prompts; p.draft.image_prompt = d.image_prompt; if (d.visual_brief) p.draft.visual_brief = d.visual_brief; return { post: p, message: `pipeline: new prompts ${prm[1]}` }; });
         const pm = promptMessage(r.post);
         return [{ type: 'ack', text: '' }, ...(pm ? [{ type: 'send', text: '🔄 Новые промпты:', after: pm }] : [{ type: 'send', text: 'Все картинки уже есть' }])];
@@ -276,7 +309,7 @@ export async function handleUpdate(update, { owner, host, deps }) {
         const label = { post: 'пост-картинку', carousel: 'карусель', reel: 'Reels' }[fm[2]];
         await deps.notify?.(`🔄 Переделываю ${fm[1]} в ${label}…`);
         const cur = await (deps.pipe || withPipe)(st => ({ post: findPost(st, fm[1]) }));
-        const draft = await (deps.regenerate || regenerate)(cur.post, '', undefined, fm[2]);
+        const draft = await (deps.regenerate || regenerate)(cur.post, '', undefined, fm[2], { timeoutMs: BOT_AI_MS });
         const r = await (deps.pipe || withPipe)(st => {
           const p = findPost(st, fm[1]);
           const bg = p.bg;
@@ -307,16 +340,20 @@ export async function handleUpdate(update, { owner, host, deps }) {
         return [{ type: 'ack', text: 'Готово' }, { type: 'send', text: r.rerender ? `🖼 Картинка стала обложкой ${bgm[2]}. Пересобираю финал — ~2 минуты.` : `🖼 Картинка стала обложкой ${bgm[2]}. Теперь жми «✅ Текст ок — собрать» в карточке ${bgm[2]}.`, keyboard: r.rerender ? null : textButtons(r.target, host).slice(0, 1) }];
       } catch (err) { return [{ type: 'ack', text: err instanceof ReviewError ? err.message : 'Ошибка' }]; }
     }
-    const pl = String(cb.data || '').match(/^pl:(P\d{4,6}):(approve_text|approve_final|redo|retry|reject|regen|handoff)$/);
-    if (pl) return pipelineAction(pl[1], pl[2], '', { owner, host, deps }, true);
+    const pl = String(cb.data || '').match(/^pl:(P\d{4,6}):(approve_text|approve_final|redo|retry|reject|regen|handoff)(?::([0-9a-f]{8}))?$/);
+    if (pl) return pipelineAction(pl[1], pl[2], '', { owner, host, deps, rid: pl[2] === 'approve_final' ? pl[3] || null : null }, true);
     const parts = String(cb.data || '').split(':');
     if (parts[0] === 'menu' && ['pending', 'posts', 'comments'].includes(parts[1])) {
-      const r = await withQueue(s => ({ cards: reviewList(s, parts[1] === 'pending' ? null : parts[1]) }), deps);
-      return [{ type: 'ack', text: 'Список открыт' }, ...r.cards.map(c => ({ type: 'send', ...c }))];
+      try {
+        const r = await withQueue(s => ({ cards: reviewList(s, parts[1] === 'pending' ? null : parts[1]) }), deps);
+        return [{ type: 'ack', text: 'Список открыт' }, ...r.cards.map(c => ({ type: 'send', ...c }))];
+      } catch (err) { return [{ type: 'ack', text: err instanceof ReviewError ? err.message.slice(0, 180) : 'IGM недоступен, попробуй позже' }]; }
     }
     if (parts[0] === 'menu' && parts[1] === 'status') {
-      const r = await withQueue(s => ({ text: countStatus(s) }), deps);
-      return [{ type: 'ack', text: 'Статус' }, { type: 'send', text: r.text, keyboard: mainKeyboard(host) }];
+      try {
+        const r = await withQueue(s => ({ text: countStatus(s) }), deps);
+        return [{ type: 'ack', text: 'Статус' }, { type: 'send', text: r.text, keyboard: mainKeyboard(host) }];
+      } catch (err) { return [{ type: 'ack', text: err instanceof ReviewError ? err.message.slice(0, 180) : 'IGM недоступен, попробуй позже' }]; }
     }
     if (parts.length === 3 && parts[0] === 'review') {
       const [, id, action] = parts;
@@ -404,12 +441,39 @@ export async function handleUpdate(update, { owner, host, deps }) {
       return [cardFor(r.post)];
     } catch (err) { return [{ type: 'send', text: 'Не получилось: ' + (err instanceof ReviewError ? err.message : 'ошибка') }]; }
   }
+  // База знаний: вопрос (/ask или текст со «?» в конце), заметки
+  if (cmd === 'ask' || (!cmd && /\?\s*$/.test(text) && text.length <= 600)) {
+    const q = cmd ? text.replace(/^\/\w+(?:@\w+)?\s*/, '') : text;
+    if (!q.trim()) return [{ type: 'send', text: 'Спроси что-нибудь: /ask какие посты про сериалы зашли лучше всего?' }];
+    await deps.notify?.('🔎 Ищу в базе…');
+    try { return [{ type: 'send', text: answerText(await (deps.answer || answer)(q)) }]; }
+    catch (err) { return [{ type: 'send', text: 'Не получилось: ' + (err instanceof ReviewError ? err.message : 'ошибка ИИ') }]; }
+  }
+  if (cmd === 'note') {
+    try {
+      const r = await (deps.addNote || addNote)(text.replace(/^\/\w+(?:@\w+)?\s*/, ''));
+      return [{ type: 'send', text: `📝 Заметка №${r.n} в базе знаний (всего ${r.total}). ИИ будет учитывать её в ответах и постах` }];
+    } catch (err) { return [{ type: 'send', text: err instanceof ReviewError ? err.message : 'Не получилось сохранить' }]; }
+  }
+  if (cmd === 'notes') {
+    try {
+      const { notes } = await (deps.loadNotes || loadNotes)();
+      if (!notes.length) return [{ type: 'send', text: 'В базе знаний пока нет заметок. Добавь: /note текст' }];
+      return [{ type: 'send', text: ('📚 Последние заметки:\n\n' + notes.slice(-15).reverse().map(n => `№${n.n}: ${n.text.slice(0, 200)}`).join('\n\n') + '\n\nУдалить: /unnote N').slice(0, 4000) }];
+    } catch { return [{ type: 'send', text: 'Не получилось прочитать заметки' }]; }
+  }
+  if (cmd === 'unnote') {
+    const n = Number((text.match(/\d+/) || [])[0]);
+    if (!n) return [{ type: 'send', text: 'Используй: /unnote 3' }];
+    try { const left = await (deps.removeNote || removeNote)(n); return [{ type: 'send', text: `🗑 Заметка №${n} удалена (осталось ${left})` }]; }
+    catch (err) { return [{ type: 'send', text: err instanceof ReviewError ? err.message : 'Не получилось' }]; }
+  }
   // Свой текст (не команда, от 40 знаков) → пост из твоего текста
   if (!cmd && text.length >= 40) {
     await deps.notify?.('🎨 Делаю пост из твоего текста…');
     try {
       const presetId = presetFor(text.length > 450 ? 'carousel' : 'post', text);
-      const draft = await (deps.generate || generateDraft)({ presetId, topic: text.replace(/\s+/g, ' ').slice(0, 200), owner_text: text });
+      const draft = await (deps.generate || generateDraft)({ presetId, topic: text.replace(/\s+/g, ' ').slice(0, 200), owner_text: text, timeoutMs: BOT_AI_MS });
       const r = await pipe(st => {
         const post = createPost(st, { draft, source: { kind: 'own_text', topic: text.slice(0, 200), facts: text.slice(0, 1500), preset_id: presetId } }, owner);
         return { post, message: `pipeline: own text ${post.id}` };
@@ -431,7 +495,7 @@ export async function handleUpdate(update, { owner, host, deps }) {
     const presetId = presetFor(cmd, topic);
     await deps.notify?.('✍️ Пишу текст поста…');
     try {
-      const draft = await (deps.generate || generateDraft)({ presetId, topic });
+      const draft = await (deps.generate || generateDraft)({ presetId, topic, timeoutMs: BOT_AI_MS });
       const r = await (deps.pipe || withPipe)(st => {
         const post = createPost(st, { draft, source: { kind: 'bot', topic, preset_id: presetId } }, owner);
         return { post, message: `pipeline: new ${post.id}` };
@@ -529,7 +593,7 @@ async function install(host) {
   }
   return [
     `Вебхук → ${url}: ${hook.ok ? '✅' : '❌ ' + (hook.description || '')}`,
-    `Команды бота: ${cmds.ok ? '✅' : '❌ ' + (cmds.description || '')}`,
+    `Команды бота (полные — только тебе): ${cmds.ok ? '✅' : '❌ ' + (cmds.description || '')}`,
     `Кнопка «Instagram Manager»: ${menu.ok ? '✅' : '❌ ' + (menu.description || '')}`,
     '',
     hook.ok ? 'Готово. Напиши боту /start — ответ придёт сразу.' : 'Вебхук не подключён.',
@@ -547,6 +611,8 @@ export default async function handler(req, res) {
       if (!botToken()) return text(res, 503, 'TG_BOT_TOKEN не задан на Vercel.');
       return text(res, 200, await install(host));
     }
+    // Самопроверка только по ключу: иначе любой видел бы, какие переменные заданы и куда смотрит вебхук
+    if (!secret() || !sameSecret(q.get('key'), secret())) return text(res, 200, 'ok');
     let info = 'TG_BOT_TOKEN не задан';
     if (botToken()) {
       const me = await tg('getMe', {});
@@ -568,13 +634,15 @@ export default async function handler(req, res) {
     ].join('\n'));
   }
 
-  // Без секрета обновления не принимаются: иначе любой мог бы прислать «апдейт от владельца»
-  if (!secret()) return text(res, 503, 'TG_WEBHOOK_SECRET is not set');
+  // Без секрета (или с секретом короче 24 символов) обновления не принимаются: иначе любой мог бы прислать «апдейт от владельца»
+  if (!secret()) return text(res, 503, 'TG_WEBHOOK_SECRET is not set or shorter than 24 chars');
   if (!sameSecret(req.headers['x-telegram-bot-api-secret-token'], secret())) return text(res, 401, 'bad secret');
 
   // Telegram повторяет запрос при не-200, поэтому ошибки обработки логируем и всё равно отвечаем 200
+  let update = {};
   try {
-    const update = readBody(req);
+    update = readBody(req);
+    if (seenUpdate(update.update_id)) return text(res, 200, 'ok');
     const owner = ownerId();
     const guest = guestReply(update, owner, host);
     if (guest) { for (const g of guest) await tg(g.method, g.body); return text(res, 200, 'ok'); }
@@ -593,8 +661,11 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error('bot update failed', err?.message || err);
-    const chat = req.body?.message?.chat?.id;
-    if (String(chat) === ownerId()) await tg('sendMessage', { chat_id: chat, text: 'Не получилось: ' + (err instanceof ReviewError ? err.message : 'внутренняя ошибка') });
+    const why = err instanceof ReviewError ? err.message : 'внутренняя ошибка';
+    const cb = update?.callback_query;
+    if (cb?.id) await tg('answerCallbackQuery', { callback_query_id: cb.id, text: ('Не получилось: ' + why).slice(0, 180) });
+    const chat = update?.message?.chat?.id ?? cb?.message?.chat?.id;
+    if (chat != null && String(chat) === ownerId()) await tg('sendMessage', { chat_id: chat, text: 'Не получилось: ' + why });
   }
   return text(res, 200, 'ok');
 }

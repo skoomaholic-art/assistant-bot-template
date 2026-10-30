@@ -69,6 +69,7 @@ header{position:sticky;z-index:20;top:0;background:rgba(11,14,18,.97);border-bot
           <div class="field"><label for="backgroundUpload" class="file-drop">＋ Загрузить собственное фоновое изображение<input type="file" accept="image/*" id="backgroundUpload"></label></div>
           <div class="inline-buttons"><button id="clearBg" class="small">Удалить фон</button><span class="data-chip" id="bgStatus">Изображение не загружено</span></div>
           <div class="cols2"><div class="field"><label for="bgMode">Тип фона</label><select id="bgMode" data-field="bgMode"><option value="solid">Сплошной</option><option value="bars">Тонкие линии</option><option value="circle">Геометрия</option><option value="film">Киноплёнка</option></select></div><div class="field"><label for="bgFit">Изображение</label><select id="bgFit" data-field="bgFit"><option value="cover">Заполнить кадр</option><option value="contain">Уместить целиком</option></select></div></div>
+          <div class="field"><label class="checkline"><input id="bgMono" type="checkbox" data-field="bgMono"> Чёрно-белое фото</label></div>
           <div class="field"><label for="dim">Затемнение загруженного фото</label><div class="range-row"><input type="range" min="0" max="90" step="5" id="dim" data-field="dim"><output data-for="dim"></output></div></div>
           <div class="field"><label for="bgX">Фото: фокус по горизонтали</label><div class="range-row"><input type="range" min="0" max="100" id="bgX" data-field="bgX"><output data-for="bgX"></output></div></div>
           <div class="field"><label for="bgY">Фото: фокус по вертикали</label><div class="range-row"><input type="range" min="0" max="100" id="bgY" data-field="bgY"><output data-for="bgY"></output></div></div>
@@ -130,8 +131,8 @@ const CATS={cinema:'КИНО',series:'СЕРИАЛЫ',analysis:'РАЗБОР',fa
 const COLORS={orange:'#F2AA4C',blue:'#90AFB9',red:'#C76C66',ivory:'#F1ECE3',green:'#92B3A0'};
 const FONTS={sans:'Arial, Helvetica, sans-serif',condensed:'"Arial Narrow", "Liberation Sans Narrow", Arial, sans-serif',serif:'Georgia, "Times New Roman", serif'};
 const STORAGE='mybrand-cover-studio-v2';
-let logoData=ORIGINAL_AVATAR;let logoImage=null;let slides=[];let active=0;let history=[];let saveTimer=null;let toastTimer=null;
-function baseSlide(){return {stylePreset:'noir',format:'reel',category:'cinema',layout:'editorial',theme:'orange',title:'НЕ КАЖДЫЙ\nШЕДЕВР ДОЛЖЕН\nНРАВИТЬСЯ',kicker:'КИНО / МНЕНИЕ',subtitle:'Кино, которое хочется обсудить',footer:'MYBRAND',episode:'01',typeface:'sans',titleAlign:'left',titleSize:100,titleY:41,titleWidth:81,bgMode:'solid',bgFit:'cover',dim:70,bgX:50,bgY:50,bgColor:'#12161B',bgImage:null,showLogo:true,logoPosition:'bottom-right',logoSize:10,autofit:true};}
+let logoData=ORIGINAL_AVATAR;let logoImage=null;let slides=[];let active=0;let undoStack=[];let saveTimer=null;let toastTimer=null;
+function baseSlide(){return {stylePreset:'noir',format:'reel',category:'cinema',layout:'editorial',theme:'orange',title:'НЕ КАЖДЫЙ\nШЕДЕВР ДОЛЖЕН\nНРАВИТЬСЯ',kicker:'КИНО / МНЕНИЕ',subtitle:'Кино, которое хочется обсудить',footer:'MYBRAND',episode:'01',typeface:'sans',titleAlign:'left',titleSize:100,titleY:41,titleWidth:81,bgMode:'solid',bgFit:'cover',dim:70,bgX:50,bgY:50,bgColor:'#12161B',bgImage:null,bgMono:false,showLogo:true,logoPosition:'bottom-right',logoSize:10,autofit:true};}
 const PRESETS={
  cinema:{format:'reel',category:'cinema',title:'НЕ КАЖДЫЙ\nШЕДЕВР ДОЛЖЕН\nНРАВИТЬСЯ',kicker:'КИНО / МНЕНИЕ',subtitle:'И это нормально',footer:'MYBRAND',episode:'01',theme:'orange',layout:'editorial',titleY:42},
  series:{format:'reel',category:'series',title:'ПОЧЕМУ МЫ\nБРОСАЕМ\nСЕРИАЛЫ',kicker:'СЕРИАЛЫ / РАЗБОР',subtitle:'Дело не только в сценарии',footer:'MYBRAND',episode:'02',theme:'blue',layout:'poster',titleY:53},
@@ -147,7 +148,7 @@ function safeDataURI(s){return typeof s==='string'&&/^data:image\/(png|jpeg|webp
 function normalize(x){let d=baseSlide();if(!x||typeof x!=='object')return d;for(let k of Object.keys(d)){if(k==='bgImage'){d.bgImage=safeDataURI(x.bgImage);continue;}if(typeof d[k]==='string'&&typeof x[k]==='string'&&x[k].length<16000)d[k]=x[k];if(typeof d[k]==='number'&&Number.isFinite(x[k]))d[k]=x[k];if(typeof d[k]==='boolean'&&typeof x[k]==='boolean')d[k]=x[k];}
  if(!SIZE[d.format])d.format='reel';if(!CATS[d.category])d.category='cinema';if(!COLORS[d.theme])d.theme='orange';if(!['editorial','poster','center','split','number'].includes(d.layout))d.layout='editorial';if(!FONTS[d.typeface])d.typeface='sans';if(!['left','center','right'].includes(d.titleAlign))d.titleAlign='left';if(!['solid','bars','circle','film','vignette','beam','frame','grain'].includes(d.bgMode))d.bgMode='solid';if(!['cover','contain'].includes(d.bgFit))d.bgFit='cover';if(!['bottom-right','bottom-left','top-right','top-left','none'].includes(d.logoPosition))d.logoPosition='bottom-right';d.titleSize=clamp(d.titleSize,60,160);d.titleY=clamp(d.titleY,15,82);d.titleWidth=clamp(d.titleWidth,50,92);d.logoSize=clamp(d.logoSize,5,18);d.dim=clamp(d.dim,0,90);d.bgX=clamp(d.bgX,0,100);d.bgY=clamp(d.bgY,0,100);d.bgColor=safeColor(d.bgColor);return d;}
 function toast(t){$('toast').textContent=t;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2900)}
-function snapshot(){history.push(JSON.stringify({slides,active,logoData}));if(history.length>18)history.shift()}
+function snapshot(){undoStack.push(JSON.stringify({slides,active,logoData}));if(undoStack.length>18)undoStack.shift()}
 function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(STORAGE,JSON.stringify({version:2,slides,active,logoData}));$('saveBtn').title='Автосохранено'}catch(e){$('saveBtn').title='Доступно только сохранение через JSON';}},650)}
 function loadStored(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'null');if(data&&Array.isArray(data.slides)&&data.slides.length&&data.slides.length<=40){slides=data.slides.map(normalize);active=Math.min(Math.max(0,data.active||0),slides.length-1);logoData=safeDataURI(data.logoData)||ORIGINAL_AVATAR;window.__skoomaDraftMeta=data.postMeta||null;document.dispatchEvent(new Event('skooma-draft-changed'));return;}}catch(e){}slides=[baseSlide()];}
 const cache=new Map();function imgFrom(src,done){if(!src){done(null);return;}if(cache.has(src)){const cached=cache.get(src);if(cached.complete&&cached.naturalWidth)done(cached);else cached.addEventListener('load',()=>done(cached),{once:true});return;}const im=new Image();cache.set(src,im);im.onload=()=>done(im);im.onerror=()=>done(null);im.src=src;}
@@ -173,8 +174,10 @@ function titleBlock(ctx,s,w,h,accent){const wide=s.format==='wide';const base=w/
  const after=y+totalH;
  if(String(s.subtitle||'').trim()){let sz=Math.max(21*base,31*base);const longSub=String(s.subtitle).length>90;const subMax=longSub?w*.82:Math.min(Math.max(width,w*.62),w*.8);if(longSub)sz=(String(s.subtitle).split('\n').length>8?34:String(s.subtitle).length>180?40:44)*base;if(s.format==='reel')sz=Math.max(sz,(String(s.subtitle).length>140?46:56)*base);let subX=ox, subAlign=align;if(s.layout==='center'&&align==='left'){subX=w/2;subAlign='center';}let subY=after+35*base;if(subY<h*.83)lineText(ctx,s.subtitle,subX,subY,s.format==='reel'?Math.max(subMax,w*.84):subMax,{size:sz,color:s.format==='reel'?'#DCE3EA':'#BDC7D0',align:subAlign,maxLines:longSub?Math.max(9,String(s.subtitle).split('\n').length+2):(s.format==='reel'?5:4),lineHeight:longSub?1.32:1.26});}
 }
+// Ч/Б фото: яркость по каждому пикселю (работает во всех браузерах, в отличие от ctx.filter)
+function toMono(ctx,w,h){try{const im=ctx.getImageData(0,0,w,h),a=im.data;for(let i=0;i<a.length;i+=4){const y=a[i]*.299+a[i+1]*.587+a[i+2]*.114;a[i]=a[i+1]=a[i+2]=y;}ctx.putImageData(im,0,0);}catch(e){}}
 function drawBackground(ctx,s,w,h,accent,bgImg){ctx.fillStyle=safeColor(s.bgColor);ctx.fillRect(0,0,w,h);
- if(bgImg){fitDraw(ctx,bgImg,w,h,s.bgFit,s.bgX,s.bgY);ctx.fillStyle=`rgba(5,8,11,${(s.dim/100).toFixed(2)})`;ctx.fillRect(0,0,w,h);}else{
+ if(bgImg){fitDraw(ctx,bgImg,w,h,s.bgFit,s.bgX,s.bgY);if(s.bgMono)toMono(ctx,w,h);ctx.fillStyle=`rgba(5,8,11,${(s.dim/100).toFixed(2)})`;ctx.fillRect(0,0,w,h);}else{
  const sc=w/1080;
  ctx.save();ctx.globalAlpha=.24;ctx.strokeStyle=accent;ctx.lineWidth=2.2*sc;
  if(s.bgMode==='bars'){for(let i=0;i<7;i++){let x=w*(.66+i*.044);ctx.beginPath();ctx.moveTo(x,h*.12);ctx.lineTo(x,h*.85);ctx.stroke();}}
@@ -222,7 +225,7 @@ $('duplicateBtn').onclick=dup;$('cloneBtn').onclick=dup;
 $('deleteBtn').onclick=()=>{if(slides.length===1){toast('Нужен хотя бы один слайд');return;}mutation(()=>{slides.splice(active,1);active=Math.min(active,slides.length-1);});};
 function move(d){const next=active+d;if(next<0||next>=slides.length)return;mutation(()=>{[slides[active],slides[next]]=[slides[next],slides[active]];active=next;});}
 $('upBtn').onclick=()=>move(-1);$('downBtn').onclick=()=>move(1);
-$('undoBtn').onclick=()=>{if(!history.length){toast('Пока нечего отменять');return;}const p=JSON.parse(history.pop());slides=p.slides.map(normalize);active=p.active;logoData=p.logoData;syncUI();persist();toast('Изменение отменено');};
+$('undoBtn').onclick=()=>{if(!undoStack.length){toast('Пока нечего отменять');return;}const p=JSON.parse(undoStack.pop());slides=p.slides.map(normalize);active=p.active;logoData=p.logoData;syncUI();persist();toast('Изменение отменено');};
 function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
 function filename(i,s){let suf=s.format==='reel'?'reel':s.format==='portrait'?'carousel':s.format;return `MyBrand_${String(i+1).padStart(2,'0')}_${suf}.png`}
 function blobFromCanvas(c){return new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('PNG export failed')),'image/png'));}
@@ -255,7 +258,7 @@ window.__skooma={get slides(){return slides},get active(){return active},preview
 <script>
 // «Назад»: в Ассистента (вкладка «Посты»). В Telegram — ещё и системная кнопка «назад» в шапке
 (function () {
-  const go = () => { if (document.referrer && new URL(document.referrer).host === location.host && history.length > 1) history.back(); else location.href = '/'; };
+  const go = () => { if (document.referrer && new URL(document.referrer).host === location.host && window.history.length > 1) window.history.back(); else location.href = '/'; };
   document.getElementById('backBtn')?.addEventListener('click', go);
   const tg = window.Telegram?.WebApp;
   try { if (tg?.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(go); } } catch {}

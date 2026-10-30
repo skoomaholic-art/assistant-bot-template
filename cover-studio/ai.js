@@ -15,6 +15,7 @@
       bgImage:null,showLogo:true,logoPosition:'bottom-right',
       titleSize:format==='portrait'?Math.min(visual.titleSize,94):format==='reel'?Math.max(visual.titleSize,128):visual.titleSize,titleY:visual.titleY,titleWidth:format==='reel'?88:83,
       ...(draft.visual_prefs&&typeof draft.visual_prefs==='object'?draft.visual_prefs:{}), // вёрстка, выученная из правок владельца
+      ...(draft.bg_mono===true?{bgMono:true}:{}), // некролог: фото чёрно-белые
     })).map(fitLongWords).concat(creditsPage(draft,visual,category,format));
   }
   // Слайд-титры в конце карусели: кто снимался и о ком шла речь
